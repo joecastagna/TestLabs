@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>USA Path to Glory · 2026 World Cup Simulator</title>
+    <style>
+:root {
+  --navy: #0a1733;
+  --navy-2: #10224a;
+  --red: #e23636;
+  --red-dk: #b81e1e;
+  --white: #ffffff;
+  --ink: #0a1733;
+  --muted: #6b7a99;
+  --line: #e3e8f2;
+  --comp: #2e8b57;
+  --stakes: #e2a236;
+  --winp: #2f6fed;
+  --gold: #f5c542;
+  --bg: #f5f7fb;
+  --shadow: 0 6px 24px rgba(10, 23, 51, 0.08);
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial,
+    sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* ---------------------------------- hero --------------------------------- */
+.hero {
+  background: radial-gradient(
+      1200px 400px at 80% -10%,
+      rgba(226, 54, 54, 0.35),
+      transparent 60%
+    ),
+    linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+  color: var(--white);
+  padding: 48px 20px 56px;
+}
+.hero-inner {
+  max-width: 980px;
+  margin: 0 auto;
+}
+.badge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+.hero h1 {
+  font-size: clamp(38px, 7vw, 68px);
+  margin: 16px 0 8px;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.tagline {
+  max-width: 620px;
+  color: #c7d2e8;
+  font-size: 17px;
+  margin: 0 0 24px;
+}
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ctrl {
+  cursor: pointer;
+  border: none;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s;
+  box-shadow: 0 6px 18px rgba(226, 54, 54, 0.4);
+}
+.ctrl:hover {
+  transform: translateY(-2px);
+}
+.ctrl.ghost {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: none;
+}
+
+/* --------------------------------- layout -------------------------------- */
+main {
+  max-width: 980px;
+  margin: -32px auto 0;
+  padding: 0 20px 40px;
+}
+
+/* -------------------------------- summary -------------------------------- */
+.summary {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 28px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-left: 8px solid var(--muted);
+}
+.summary.champ {
+  border-left-color: var(--gold);
+  background: linear-gradient(180deg, #fffdf3, #fff);
+}
+.summary.out {
+  border-left-color: var(--red);
+}
+.summary.live {
+  border-left-color: var(--winp);
+}
+.verdict {
+  display: flex;
+  flex-direction: column;
+}
+.verdict-main {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.verdict-sub {
+  color: var(--muted);
+  font-size: 15px;
+}
+.summary-stats {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.stat-num {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--navy);
+}
+.stat-lbl {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* -------------------------------- briefing ------------------------------- */
+.briefing {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 8px 28px 20px;
+  margin-top: 18px;
+}
+.briefing h2 {
+  font-size: 18px;
+  margin: 18px 0 10px;
+}
+.briefing ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.briefing li {
+  margin: 8px 0;
+  color: #2a3a5c;
+  font-size: 15px;
+}
+.briefing strong {
+  color: var(--navy);
+}
+
+/* --------------------------------- legend -------------------------------- */
+.legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 24px 2px 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.dot.comp {
+  background: var(--comp);
+}
+.dot.stakes {
+  background: var(--stakes);
+}
+.dot.winp {
+  background: var(--winp);
+}
+.legend-key {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+/* -------------------------------- matches -------------------------------- */
+.matches {
+  display: grid;
+  gap: 16px;
+}
+.match-card {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.match-card.win {
+  border-left: 6px solid var(--comp);
+}
+.match-card.draw {
+  border-left: 6px solid var(--stakes);
+}
+.match-card.loss {
+  border-left: 6px solid var(--red);
+}
+.match-card.key {
+  border-color: var(--gold);
+  box-shadow: 0 8px 28px rgba(245, 197, 66, 0.35);
+}
+.match-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.stage-label {
+  display: block;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--navy);
+}
+.stage-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.chip {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.key-chip {
+  background: var(--gold);
+  color: #5a4500;
+}
+
+.match-body {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+  margin: 16px 0;
+  align-items: center;
+}
+.opponent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.flag {
+  font-size: 34px;
+  line-height: 1;
+}
+.opp-text {
+  display: flex;
+  flex-direction: column;
+}
+.opp-name {
+  font-weight: 700;
+  font-size: 17px;
+}
+.vs {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 13px;
+}
+.opp-note {
+  font-size: 13px;
+  color: var(--muted);
+}
+.opp-rank {
+  margin-left: auto;
+  text-align: center;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.rank-num {
+  display: block;
+  font-weight: 800;
+  color: var(--navy);
+}
+.rank-lbl {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.metric-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.metric-top span:last-child {
+  font-weight: 700;
+  color: var(--ink);
+}
+.meter {
+  height: 8px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+.meter-fill.comp {
+  background: var(--comp);
+}
+.meter-fill.stakes {
+  background: var(--stakes);
+}
+.meter-fill.winp {
+  background: var(--winp);
+}
+
+.match-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toggle {
+  display: inline-flex;
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+}
+.toggle-btn {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  padding: 8px 16px;
+  border-radius: 999px;
+  transition: all 0.12s;
+}
+.toggle-btn:hover {
+  color: var(--ink);
+}
+.toggle-btn.active.win {
+  background: var(--comp);
+  color: #fff;
+}
+.toggle-btn.active.draw {
+  background: var(--stakes);
+  color: #fff;
+}
+.toggle-btn.active.loss {
+  background: var(--red);
+  color: #fff;
+}
+.type-tag {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* --------------------------------- footer -------------------------------- */
+.foot {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 24px 20px 48px;
+}
+.foot a {
+  color: var(--muted);
+}
+
+/* ----------------------------- section headers --------------------------- */
+.section-h {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--navy);
+  margin: 28px 2px 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.real-tag,
+.proj-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.real-tag {
+  background: #e3f5ea;
+  color: #1c7a45;
+}
+.proj-tag {
+  background: #eef1f8;
+  color: var(--muted);
+}
+.proj {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  background: #eef1f8;
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+/* ------------------------------- path bar -------------------------------- */
+.pathbar {
+  background: linear-gradient(135deg, #0d1d40, #15294f);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin: 6px 0 4px;
+  box-shadow: var(--shadow);
+}
+.pathbar-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pathbar-title {
+  font-weight: 800;
+  font-size: 16px;
+}
+.pathbar-sub {
+  font-weight: 500;
+  font-size: 13px;
+  color: #b9c6e0;
+}
+.path-picker {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+}
+.path-pick {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #c7d2e8;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  transition: all 0.12s;
+}
+.path-pick.on {
+  background: #fff;
+  color: var(--navy);
+}
+.path-compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.pc-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pc-card.sel {
+  border-color: var(--gold);
+  background: rgba(245, 197, 66, 0.12);
+}
+.pc-head {
+  font-weight: 800;
+  font-size: 14px;
+}
+.pc-body {
+  font-size: 13px;
+  color: #d4ddf0;
+}
+.pc-prob {
+  font-weight: 800;
+  font-size: 13px;
+}
+.pc-prob.good {
+  color: #6ee7a0;
+}
+.pc-prob.bad {
+  color: #ff9b9b;
+}
+.pc-vs {
+  font-size: 11.5px;
+  color: #9fb0d0;
+  text-align: center;
+  max-width: 110px;
+  line-height: 1.3;
+}
+
+/* ----------------------------- eliminated dim ---------------------------- */
+.match-card.dim {
+  opacity: 0.5;
+  filter: grayscale(0.4);
+}
+
+/* -------------------------------- flash toast ---------------------------- */
+.flash {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--navy);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(10, 23, 51, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 50;
+}
+.flash.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 680px) {
+  .match-body {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .summary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .path-compare {
+    grid-template-columns: 1fr;
+  }
+  .pc-vs {
+    max-width: none;
+  }
+}
+
+</style>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="badge">🇺🇸 USMNT · FIFA World Cup 2026</div>
+        <h1>Path to Glory</h1>
+        <p class="tagline">
+          Real Group D draw. Toggle every result and watch two knockout roads
+          diverge — <strong>winning the group</strong> vs finishing 2nd — with
+          the <strong>key</strong> and most <strong>competitive</strong> matches
+          flagged live.
+        </p>
+        <div class="controls">
+          <button id="realistic" class="ctrl ghost">Realistic run</button>
+          <button id="reset" class="ctrl">Win it all ✨</button>
+          <button id="share" class="ctrl ghost">🔗 Share scenario</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="summary" class="summary" aria-live="polite"></section>
+
+      <section id="briefing" class="briefing"></section>
+
+      <div class="legend">
+        <span><i class="dot comp"></i> Competitiveness — how close on paper</span>
+        <span><i class="dot stakes"></i> Stakes — how much is riding on it</span>
+        <span><i class="dot winp"></i> USA win chance</span>
+        <span class="legend-key">⭐ = the single most decisive match</span>
+      </div>
+
+      <section id="matches" class="matches"></section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        Built for fun ·
+        <a
+          href="https://code.claude.com/docs/en/claude-code-on-the-web"
+          target="_blank"
+          rel="noopener"
+          >ratings &amp; opponents are a projection — edit
+          <code>data.js</code> to match the real draw</a
+        >.
+      </p>
+    </footer>
+
+    <script>
+/*
+ * USA Path to Glory — data model for the 2026 FIFA World Cup
+ *
+ * GROUP STAGE DATA IS REAL (Final Draw, 5 Dec 2025): the USA co-hosts and was
+ * drawn into Group D with Paraguay, Australia and Türkiye. Dates, venues and
+ * FIFA rankings below are the real ones.
+ *
+ * KNOCKOUTS DIVERGE BY GROUP FINISH — this is the heart of the strategy:
+ *   • Win Group D (1D)  → Round of 32 in Santa Clara vs a best-third qualifier
+ *                         (from Groups B/E/F/I/J): a softer, winnable draw.
+ *   • Finish 2nd (2D)   → Round of 32 in Dallas vs the Group G runner-up
+ *                         (Belgium's group): a brutal early test.
+ * So the single biggest thing USA can do to ease the road is WIN THE GROUP.
+ *
+ * Knockout OPPONENTS past the Round of 32 are projections (the real foes depend
+ * on results still to come) and are flagged `projected: true`. Edit any number
+ * in this file and every meter, probability and the key-match pick recomputes.
+ *
+ * `rating` is the team's FIFA ranking points (an Elo-style strength score the
+ * competitiveness math compares against the USA baseline).
+ */
+
+const USA_RATING = 1659; // USMNT — FIFA rank 17 (June 2026)
+
+// ---- Group D — REAL fixtures -------------------------------------------------
+const GROUP_MATCHES = [
+  {
+    id: "g1",
+    stage: "Group D · Matchday 1",
+    type: "group",
+    venue: "SoFi Stadium, Los Angeles",
+    date: "2026-06-12",
+    opponent: {
+      name: "Paraguay",
+      code: "PAR",
+      flag: "🇵🇾",
+      rating: 1500,
+      fifaRank: 41,
+      note: "Lowest-ranked side in the group — the must-win.",
+    },
+  },
+  {
+    id: "g2",
+    stage: "Group D · Matchday 2",
+    type: "group",
+    venue: "Lumen Field, Seattle",
+    date: "2026-06-19",
+    opponent: {
+      name: "Australia",
+      code: "AUS",
+      flag: "🇦🇺",
+      rating: 1588,
+      fifaRank: 27,
+      note: "Organized, physical Socceroos — a real banana skin.",
+    },
+  },
+  {
+    id: "g3",
+    stage: "Group D · Matchday 3",
+    type: "group",
+    venue: "SoFi Stadium, Los Angeles",
+    date: "2026-06-25",
+    opponent: {
+      name: "Türkiye",
+      code: "TUR",
+      flag: "🇹🇷",
+      rating: 1622,
+      fifaRank: 22,
+      note: "Top-seed-quality talent — likely decides who wins the group.",
+    },
+  },
+];
+
+// ---- Knockout path A — WIN GROUP D (1D): the softer road ---------------------
+const PATH_WIN_GROUP = [
+  {
+    id: "r32",
+    stage: "Round of 32",
+    type: "knockout",
+    venue: "Levi's Stadium, Santa Clara",
+    date: "2026-07-01",
+    opponent: {
+      name: "Best-third qualifier",
+      code: "3RD",
+      flag: "🎟️",
+      rating: 1545,
+      fifaRank: null,
+      projected: true,
+      note: "A best-third side from Groups B/E/F/I/J — beatable on form.",
+    },
+  },
+  {
+    id: "r16",
+    stage: "Round of 16",
+    type: "knockout",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-05",
+    opponent: {
+      name: "Japan (proj.)",
+      code: "JPN",
+      flag: "🇯🇵",
+      rating: 1655,
+      fifaRank: 18,
+      projected: true,
+      note: "Sharp, well-drilled — a coin-flip knockout.",
+    },
+  },
+  {
+    id: "qf",
+    stage: "Quarterfinal",
+    type: "knockout",
+    venue: "Mercedes-Benz Stadium, Atlanta",
+    date: "2026-07-10",
+    opponent: {
+      name: "Netherlands (proj.)",
+      code: "NED",
+      flag: "🇳🇱",
+      rating: 1758,
+      fifaRank: 7,
+      projected: true,
+      note: "Total-football pedigree — the step up to the elite.",
+    },
+  },
+  {
+    id: "sf",
+    stage: "Semifinal",
+    type: "knockout",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-14",
+    opponent: {
+      name: "Brazil (proj.)",
+      code: "BRA",
+      flag: "🇧🇷",
+      rating: 1761,
+      fifaRank: 6,
+      projected: true,
+      note: "Five-time champions. This is where legends are made.",
+    },
+  },
+  {
+    id: "final",
+    stage: "Final",
+    type: "knockout",
+    venue: "MetLife Stadium, New York / New Jersey",
+    date: "2026-07-19",
+    opponent: {
+      name: "Argentina (proj.)",
+      code: "ARG",
+      flag: "🇦🇷",
+      rating: 1875,
+      fifaRank: 1,
+      projected: true,
+      note: "Reigning champions. One game for everything.",
+    },
+  },
+];
+
+// ---- Knockout path B — FINISH 2ND (2D): the brutal road ----------------------
+const PATH_RUNNER_UP = [
+  {
+    id: "r32",
+    stage: "Round of 32",
+    type: "knockout",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-02",
+    opponent: {
+      name: "Belgium (proj.)",
+      code: "BEL",
+      flag: "🇧🇪",
+      rating: 1735,
+      fifaRank: 9,
+      projected: true,
+      note: "Group G runner-up — a top-10 side as your FIRST knockout game.",
+    },
+  },
+  {
+    id: "r16",
+    stage: "Round of 16",
+    type: "knockout",
+    venue: "Lincoln Financial Field, Philadelphia",
+    date: "2026-07-04",
+    opponent: {
+      name: "Germany (proj.)",
+      code: "GER",
+      flag: "🇩🇪",
+      rating: 1730,
+      fifaRank: 10,
+      projected: true,
+      note: "Tournament aristocracy — no margin for error.",
+    },
+  },
+  {
+    id: "qf",
+    stage: "Quarterfinal",
+    type: "knockout",
+    venue: "MetLife Stadium, New York / New Jersey",
+    date: "2026-07-11",
+    opponent: {
+      name: "Spain (proj.)",
+      code: "ESP",
+      flag: "🇪🇸",
+      rating: 1876,
+      fifaRank: 2,
+      projected: true,
+      note: "World No. 2 and possession kings — a mountain.",
+    },
+  },
+  {
+    id: "sf",
+    stage: "Semifinal",
+    type: "knockout",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-15",
+    opponent: {
+      name: "France (proj.)",
+      code: "FRA",
+      flag: "🇫🇷",
+      rating: 1877,
+      fifaRank: 3,
+      projected: true,
+      note: "Match-winners everywhere. A semifinal for the ages.",
+    },
+  },
+  {
+    id: "final",
+    stage: "Final",
+    type: "knockout",
+    venue: "MetLife Stadium, New York / New Jersey",
+    date: "2026-07-19",
+    opponent: {
+      name: "Argentina (proj.)",
+      code: "ARG",
+      flag: "🇦🇷",
+      rating: 1875,
+      fifaRank: 1,
+      projected: true,
+      note: "Reigning champions. One game for everything.",
+    },
+  },
+];
+
+// Expose to app.js (plain-script load).
+if (typeof window !== "undefined") {
+  window.USA_RATING = USA_RATING;
+  window.GROUP_MATCHES = GROUP_MATCHES;
+  window.PATH_WIN_GROUP = PATH_WIN_GROUP;
+  window.PATH_RUNNER_UP = PATH_RUNNER_UP;
+  // Backwards-compatible default path used before a group finish is known.
+  window.MATCHES = GROUP_MATCHES.concat(PATH_WIN_GROUP);
+}
+
+/*
+ * USA Path to Glory — interactive simulator logic.
+ *
+ * Toggle each match Win / Draw / Loss and instantly see:
+ *   - group-stage points and the projected Group D finish (1st / 2nd / out)
+ *   - TWO knockout roads that diverge by finish — winning the group is softer,
+ *     finishing 2nd throws you straight at a top-10 side (Belgium's group)
+ *   - the most COMPETITIVE matches (closest on paper) and the single KEY match
+ *   - a live verdict, an auto briefing, and a shareable scenario link
+ */
+
+const RESULTS = ["win", "draw", "loss"];
+const RESULT_LABEL = { win: "WIN", draw: "DRAW", loss: "LOSS" };
+const POINTS = { win: 3, draw: 1, loss: 0 };
+const STORAGE_KEY = "usa-path-v2";
+
+const PATHS = {
+  win: { key: "win", label: "Win Group D (1st)", matches: () => window.PATH_WIN_GROUP },
+  runnerup: { key: "runnerup", label: "Finish 2nd", matches: () => window.PATH_RUNNER_UP },
+};
+
+/* ------------------------------- state ----------------------------------- */
+
+function defaultState() {
+  return {
+    group: { g1: "win", g2: "draw", g3: "win" },
+    knockout: {
+      win: { r32: "win", r16: "win", qf: "draw", sf: "loss", final: "loss" },
+      runnerup: { r32: "win", r16: "loss", qf: "loss", sf: "loss", final: "loss" },
+    },
+    pathMode: "auto", // "auto" | "win" | "runnerup"
+  };
+}
+
+// Load from URL hash (shareable) first, then localStorage, then defaults.
+function loadState() {
+  const fromHash = decodeStateFromHash();
+  if (fromHash) return fromHash;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return Object.assign(defaultState(), JSON.parse(raw));
+  } catch (e) {
+    /* ignore */
+  }
+  return defaultState();
+}
+
+function saveState(s) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  } catch (e) {
+    /* ignore */
+  }
+  encodeStateToHash(s);
+}
+
+// Compact hash encoding: g<wdl>|kw<wdl>|kr<wdl>|p<mode> e.g. #wdw-wwdll-wllll-a
+function encodeStateToHash(s) {
+  const c = (r) => (r === "win" ? "w" : r === "draw" ? "d" : "l");
+  const g = ["g1", "g2", "g3"].map((k) => c(s.group[k])).join("");
+  const kw = ["r32", "r16", "qf", "sf", "final"].map((k) => c(s.knockout.win[k])).join("");
+  const kr = ["r32", "r16", "qf", "sf", "final"].map((k) => c(s.knockout.runnerup[k])).join("");
+  const p = s.pathMode === "win" ? "w" : s.pathMode === "runnerup" ? "r" : "a";
+  history.replaceState(null, "", `#${g}-${kw}-${kr}-${p}`);
+}
+
+function decodeStateFromHash() {
+  const h = (location.hash || "").replace(/^#/, "");
+  const m = h.match(/^([wdl]{3})-([wdl]{5})-([wdl]{5})-([awr])$/);
+  if (!m) return null;
+  const d = (ch) => (ch === "w" ? "win" : ch === "d" ? "draw" : "loss");
+  const s = defaultState();
+  const gk = ["g1", "g2", "g3"];
+  const kk = ["r32", "r16", "qf", "sf", "final"];
+  m[1].split("").forEach((ch, i) => (s.group[gk[i]] = d(ch)));
+  m[2].split("").forEach((ch, i) => (s.knockout.win[kk[i]] = d(ch)));
+  m[3].split("").forEach((ch, i) => (s.knockout.runnerup[kk[i]] = d(ch)));
+  s.pathMode = m[4] === "w" ? "win" : m[4] === "r" ? "runnerup" : "auto";
+  return s;
+}
+
+let state = loadState();
+
+/* ----------------------------- analysis math ----------------------------- */
+
+function usaWinProb(opponentRating) {
+  const gap = window.USA_RATING - opponentRating;
+  return 1 / (1 + Math.pow(10, -gap / 400));
+}
+
+// 0..100, peaks at a 50/50 coin-flip game.
+function competitiveness(opponentRating) {
+  const p = usaWinProb(opponentRating);
+  return Math.round((1 - Math.abs(p - 0.5) * 2) * 100);
+}
+
+// 0..100 — how much is riding on the result.
+function stakes(match) {
+  if (match.type === "knockout") {
+    const order = ["r32", "r16", "qf", "sf", "final"];
+    const pos = order.indexOf(match.id);
+    return Math.round(70 + (pos / (order.length - 1)) * 30); // 70..100
+  }
+  const gpos = { g1: 0, g2: 1, g3: 2 }[match.id] || 0;
+  return Math.round(35 + gpos * 12); // 35, 47, 59
+}
+
+// Blend of stakes and competitiveness — the game to circle on the calendar.
+function keyScore(match) {
+  return Math.round(0.5 * competitiveness(match.opponent.rating) + 0.5 * stakes(match));
+}
+
+/* --------------------------- scenario evaluation -------------------------- */
+
+// Projected Group D finish from USA's points alone.
+//   >=7 pts → likely group winner (1st)
+//   4-6 pts → likely runner-up / best-third (through, but 2nd)
+//   <4 pts  → out
+function groupOutcome() {
+  const pts = GROUP_MATCHES.reduce((s, m) => s + POINTS[state.group[m.id]], 0);
+  const wins = GROUP_MATCHES.filter((m) => state.group[m.id] === "win").length;
+  const draws = GROUP_MATCHES.filter((m) => state.group[m.id] === "draw").length;
+  let finish = "out";
+  if (pts >= 7) finish = "win";
+  else if (pts >= 4) finish = "runnerup";
+  return { pts, wins, draws, losses: 3 - wins - draws, finish, advanced: pts >= 4 };
+}
+
+// Which knockout path is being shown (respecting a manual override).
+function activePathKey() {
+  if (state.pathMode === "win" || state.pathMode === "runnerup") return state.pathMode;
+  const g = groupOutcome();
+  return g.finish === "out" ? "win" : g.finish; // default view if out: show the winner road
+}
+
+// Walk the active road and decide how far USA goes.
+function evaluatePath() {
+  const g = groupOutcome();
+  const pathKey = activePathKey();
+  const matches = PATHS[pathKey].matches();
+  const res = {
+    ...g,
+    pathKey,
+    knockedOutAt: null,
+    isChampion: false,
+    roundsWon: 0,
+  };
+  if (!g.advanced) {
+    res.knockedOutAt = "Group Stage";
+    return res;
+  }
+  for (const m of matches) {
+    const r = state.knockout[pathKey][m.id];
+    if (r === "loss") {
+      res.knockedOutAt = m.stage;
+      return res;
+    }
+    res.roundsWon += 1;
+    if (m.id === "final") res.isChampion = true;
+  }
+  return res;
+}
+
+// Read/write a result regardless of which list a match belongs to.
+function getResult(m) {
+  return m.type === "group" ? state.group[m.id] : state.knockout[activePathKey()][m.id];
+}
+function setResult(m, r) {
+  if (m.type === "group") state.group[m.id] = r;
+  else state.knockout[activePathKey()][m.id] = r;
+}
+
+function activeMatches() {
+  return GROUP_MATCHES.concat(PATHS[activePathKey()].matches());
+}
+
+/* ------------------------------- rendering ------------------------------- */
+
+const meter = (v, kind) =>
+  `<div class="meter" title="${v}/100"><div class="meter-fill ${kind}" style="width:${v}%"></div></div>`;
+
+function matchCard(m, topKeyId, eliminated) {
+  const comp = competitiveness(m.opponent.rating);
+  const stk = stakes(m);
+  const winP = Math.round(usaWinProb(m.opponent.rating) * 100);
+  const isKey = m.id + m.type === topKeyId;
+  const result = getResult(m);
+  const rank = m.opponent.fifaRank ? `#${m.opponent.fifaRank}` : "—";
+
+  const toggle = RESULTS.map(
+    (r) =>
+      `<button class="toggle-btn ${r} ${result === r ? "active" : ""}" data-match="${m.id}" data-type="${m.type}" data-result="${r}">${RESULT_LABEL[r]}</button>`
+  ).join("");
+
+  return `
+    <article class="match-card ${isKey ? "key" : ""} ${result} ${eliminated ? "dim" : ""}" data-id="${m.id}">
+      <div class="match-head">
+        <div class="match-stage">
+          <span class="stage-label">${m.stage}</span>
+          <span class="stage-meta">${m.date} · ${m.venue}</span>
+        </div>
+        ${isKey ? `<span class="chip key-chip">⭐ KEY MATCH</span>` : ""}
+      </div>
+      <div class="match-body">
+        <div class="opponent">
+          <span class="flag">${m.opponent.flag}</span>
+          <div class="opp-text">
+            <span class="opp-name">USA <span class="vs">vs</span> ${m.opponent.name}${m.opponent.projected ? ` <span class="proj">proj</span>` : ""}</span>
+            <span class="opp-note">${m.opponent.note}</span>
+          </div>
+          <div class="opp-rank"><span class="rank-num">${rank}</span><span class="rank-lbl">FIFA</span></div>
+        </div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-top"><span>Competitiveness</span><span>${comp}</span></div>${meter(comp, "comp")}</div>
+          <div class="metric"><div class="metric-top"><span>Stakes</span><span>${stk}</span></div>${meter(stk, "stakes")}</div>
+          <div class="metric"><div class="metric-top"><span>USA win chance</span><span>${winP}%</span></div>${meter(winP, "winp")}</div>
+        </div>
+      </div>
+      <div class="match-foot">
+        <div class="toggle">${toggle}</div>
+        <span class="type-tag ${m.type}">${m.type === "group" ? "Group · points" : "Knockout · win or out"}</span>
+      </div>
+    </article>`;
+}
+
+function renderMatches() {
+  const path = evaluatePath();
+  const matches = activeMatches();
+
+  // Most "key" match across the active road.
+  let topKeyId = null;
+  let best = -1;
+  matches.forEach((m) => {
+    const k = keyScore(m);
+    if (k > best) {
+      best = k;
+      topKeyId = m.id + m.type;
+    }
+  });
+
+  // Dim matches beyond the point of elimination.
+  const endIdx = path.knockedOutAt
+    ? matches.findIndex((m) => m.stage === path.knockedOutAt)
+    : -1;
+
+  const groupHtml = GROUP_MATCHES.map((m) => matchCard(m, topKeyId, false)).join("");
+
+  const koMatches = PATHS[activePathKey()].matches();
+  const koHtml = koMatches
+    .map((m) => {
+      const globalIdx = matches.findIndex((x) => x === m);
+      const eliminated =
+        path.knockedOutAt === "Group Stage" || (endIdx !== -1 && globalIdx > endIdx);
+      return matchCard(m, topKeyId, eliminated);
+    })
+    .join("");
+
+  document.getElementById("matches").innerHTML = `
+    <h3 class="section-h">Group D — <span class="real-tag">real fixtures</span></h3>
+    ${groupHtml}
+    ${renderPathBar()}
+    <h3 class="section-h">Knockout road — ${PATHS[activePathKey()].label} <span class="proj-tag">projected opponents</span></h3>
+    ${koHtml}`;
+
+  // Wire toggles.
+  document.querySelectorAll(".toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const list = btn.dataset.type === "group" ? GROUP_MATCHES : PATHS[activePathKey()].matches();
+      const m = list.find((x) => x.id === btn.dataset.match);
+      setResult(m, btn.dataset.result);
+      saveState(state);
+      render();
+    });
+  });
+  document.querySelectorAll(".path-pick").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.pathMode = btn.dataset.mode;
+      saveState(state);
+      render();
+    });
+  });
+}
+
+// The path selector + the "why winning the group matters" insight.
+function renderPathBar() {
+  const g = groupOutcome();
+  const active = activePathKey();
+  const auto = state.pathMode === "auto";
+
+  const r32win = PATH_WIN_GROUP[0];
+  const r32run = PATH_RUNNER_UP[0];
+  const pWin = Math.round(usaWinProb(r32win.opponent.rating) * 100);
+  const pRun = Math.round(usaWinProb(r32run.opponent.rating) * 100);
+
+  const btn = (mode, label) =>
+    `<button class="path-pick ${state.pathMode === mode ? "on" : ""}" data-mode="${mode}">${label}</button>`;
+
+  const autoNote = auto
+    ? `Auto-picked from your ${g.pts} pts → <strong>${active === "win" ? "win the group" : g.finish === "out" ? "wouldn't qualify" : "finish 2nd"}</strong>.`
+    : `Manually viewing the <strong>${active === "win" ? "group-winner" : "runner-up"}</strong> road.`;
+
+  return `
+    <section class="pathbar">
+      <div class="pathbar-top">
+        <div class="pathbar-title">Which road? <span class="pathbar-sub">${autoNote}</span></div>
+        <div class="path-picker">
+          ${btn("auto", "Auto")}
+          ${btn("win", "Win group")}
+          ${btn("runnerup", "Finish 2nd")}
+        </div>
+      </div>
+      <div class="path-compare">
+        <div class="pc-card ${active === "win" ? "sel" : ""}">
+          <span class="pc-head">🥇 Win Group D</span>
+          <span class="pc-body">R32 in Santa Clara vs ${r32win.opponent.flag} ${r32win.opponent.name}</span>
+          <span class="pc-prob good">${pWin}% win chance</span>
+        </div>
+        <div class="pc-vs">the prize for topping the group →</div>
+        <div class="pc-card ${active === "runnerup" ? "sel" : ""}">
+          <span class="pc-head">🥈 Finish 2nd</span>
+          <span class="pc-body">R32 in Dallas vs ${r32run.opponent.flag} ${r32run.opponent.name}</span>
+          <span class="pc-prob bad">${pRun}% win chance</span>
+        </div>
+      </div>
+    </section>`;
+}
+
+function renderSummary() {
+  const path = evaluatePath();
+  const el = document.getElementById("summary");
+  let verdict, cls, sub;
+  if (path.isChampion) {
+    verdict = "🏆 WORLD CHAMPIONS";
+    cls = "champ";
+    sub = "USA wins it all — history made on home soil.";
+  } else if (path.knockedOutAt === "Group Stage") {
+    verdict = "❌ OUT IN THE GROUP";
+    cls = "out";
+    sub = `${path.pts} pts isn't enough to advance. The dream ends early.`;
+  } else if (path.knockedOutAt) {
+    verdict = `Eliminated · ${path.knockedOutAt}`;
+    cls = "out";
+    sub = `A run to the ${path.knockedOutAt.toLowerCase()}, then the road ends.`;
+  } else {
+    verdict = "Run in progress";
+    cls = "live";
+    sub = "Set every result to map the full path.";
+  }
+
+  const finishLbl =
+    path.finish === "win" ? "Win the group" : path.finish === "runnerup" ? "Through as 2nd/3rd" : "Eliminated";
+
+  el.className = `summary ${cls}`;
+  el.innerHTML = `
+    <div class="verdict"><span class="verdict-main">${verdict}</span><span class="verdict-sub">${sub}</span></div>
+    <div class="summary-stats">
+      <div class="stat"><span class="stat-num">${path.pts}</span><span class="stat-lbl">Group pts</span></div>
+      <div class="stat"><span class="stat-num">${path.wins}-${path.draws}-${path.losses}</span><span class="stat-lbl">Group W-D-L</span></div>
+      <div class="stat"><span class="stat-num">${finishLbl}</span><span class="stat-lbl">Group finish</span></div>
+      <div class="stat"><span class="stat-num">${path.roundsWon}</span><span class="stat-lbl">KO rounds won</span></div>
+    </div>`;
+}
+
+function renderBriefing() {
+  const ranked = activeMatches()
+    .map((m) => ({ m, key: keyScore(m), comp: competitiveness(m.opponent.rating), win: usaWinProb(m.opponent.rating) }))
+    .sort((a, b) => b.key - a.key);
+
+  const mustWin = GROUP_MATCHES.filter((m) => usaWinProb(m.opponent.rating) >= 0.5);
+  const upsets = ranked.filter((r) => r.win < 0.4);
+
+  const items = [
+    `<li><strong>Win the group — it's the whole game.</strong> Top Group D and the Round of 32 is a best-third qualifier in Santa Clara (${Math.round(usaWinProb(PATH_WIN_GROUP[0].opponent.rating) * 100)}% win chance). Slip to 2nd and it's Belgium in Dallas (${Math.round(usaWinProb(PATH_RUNNER_UP[0].opponent.rating) * 100)}%).</li>`,
+    `<li><strong>Bank the points early.</strong> Treat ${mustWin.map((m) => m.opponent.name).join(" and ")} as must-wins — 6 points there all but locks up the knockouts.</li>`,
+    `<li><strong>Türkiye likely decides 1st place.</strong> Matchday 3 is the group's heavyweight clash — competitiveness ${competitiveness(GROUP_MATCHES[2].opponent.rating)}/100.</li>`,
+    `<li><strong>Circle the key match:</strong> ${ranked[0].m.stage} vs ${ranked[0].m.opponent.name} grades highest on stakes × competitiveness (${ranked[0].key}/100).</li>`,
+    upsets.length
+      ? `<li><strong>Upsets required to lift it:</strong> ${upsets.map((r) => r.m.opponent.name).join(", ")}. Defensive structure + set pieces are the equalizers.</li>`
+      : `<li><strong>Favored the whole way</strong> on this road — protect leads and stay disciplined.</li>`,
+  ];
+
+  document.getElementById("briefing").innerHTML = `<h2>What USA needs to do</h2><ul>${items.join("")}</ul>`;
+}
+
+function render() {
+  renderSummary();
+  renderMatches();
+  renderBriefing();
+}
+
+/* ------------------------------- controls -------------------------------- */
+
+function setupControls() {
+  document.getElementById("reset").addEventListener("click", () => {
+    state.group = { g1: "win", g2: "win", g3: "win" };
+    for (const k of ["r32", "r16", "qf", "sf", "final"]) {
+      state.knockout.win[k] = "win";
+      state.knockout.runnerup[k] = "win";
+    }
+    saveState(state);
+    render();
+  });
+  document.getElementById("realistic").addEventListener("click", () => {
+    state = defaultState();
+    saveState(state);
+    render();
+  });
+  document.getElementById("share").addEventListener("click", async () => {
+    encodeStateToHash(state);
+    const url = location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      flash("Scenario link copied!");
+    } catch (e) {
+      flash("Link is in your address bar — copy it!");
+    }
+  });
+  window.addEventListener("hashchange", () => {
+    const s = decodeStateFromHash();
+    if (s) {
+      state = s;
+      render();
+    }
+  });
+}
+
+let flashTimer;
+function flash(msg) {
+  let el = document.getElementById("flash");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "flash";
+    el.className = "flash";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setupControls();
+  render();
+});
+
+</script>
+  </body>
+</html>
