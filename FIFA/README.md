@@ -2,55 +2,68 @@
 
 A dynamic, no-build web app that maps what the **USA men's national team** needs
 to do to win the 2026 FIFA World Cup. Toggle every match **Win / Draw / Loss**
-and watch the group table, the knockout run, the verdict, and the
-**key / most-competitive** matches all update live.
+and watch the group finish, **two diverging knockout roads**, the verdict, and
+the **key / most-competitive** matches update live.
+
+## The core idea: winning the group is the whole game
+
+The group stage is the **real Group D draw** (Final Draw, 5 Dec 2025): USA with
+🇵🇾 Paraguay, 🇦🇺 Australia and 🇹🇷 Türkiye. What happens next depends entirely on
+where USA finishes:
+
+- **Win Group D (1st)** → Round of 32 in Santa Clara vs a **best-third
+  qualifier** — a soft, winnable draw.
+- **Finish 2nd** → Round of 32 in Dallas vs the **Group G runner-up** (Belgium's
+  group) — a top-10 side as your *first* knockout game.
+
+The app makes that trade-off the centerpiece: a path selector and a side-by-side
+win-probability comparison show exactly why topping the group matters.
 
 ## What it does
 
-- **Full path, one screen** — the three group games plus Round of 32 → Round of
-  16 → Quarterfinal → Semifinal → Final, in the new 48-team 2026 format.
-- **Toggle results** — set each match to Win, Draw, or Loss. Group games are
-  scored on points (W=3, D=1, L=0); knockouts are win-or-out (a draw = survived
-  on penalties).
-- **Live verdict** — group points, W-D-L, knockout rounds won, and how far the
-  run goes: out in the group, eliminated at a round, or **🏆 World Champions**.
-- **Competitiveness meter** — how close each match is on paper (peaks when the
-  two sides are evenly matched).
-- **Stakes meter** — how much is riding on the result (rises through the rounds).
-- **⭐ Key match** — the single most decisive game, scored on stakes ×
-  competitiveness, is highlighted automatically.
-- **"What USA needs to do" briefing** — auto-generated must-wins, the tightest
-  games, and the upsets required to lift the trophy.
-- **Persists** your scenario in the browser, plus quick presets ("Realistic run"
-  and "Win it all").
+- **Real group, two projected roads** — 3 real Group D fixtures, then a full
+  Round of 32 → R16 → QF → SF → Final that **changes** based on group finish.
+- **Toggle every result** — group games are points-based (W=3, D=1, L=0);
+  knockouts are win-or-out (a draw = survived on penalties).
+- **Auto or manual path** — the knockout road is auto-picked from your points
+  (≥7 → win group, 4–6 → 2nd), or force either road to compare.
+- **Live verdict** — group points, W-D-L, finish, knockout rounds won, up to
+  **🏆 World Champions**.
+- **Competitiveness meter** — how close each game is (peaks on coin-flips).
+- **Stakes meter** — how much is riding on it (rises through the rounds).
+- **⭐ Key match** — the single most decisive game (stakes × competitiveness),
+  highlighted automatically.
+- **"What USA needs to do" briefing** — auto-generated must-wins, the decider,
+  and the upsets required to lift the trophy.
+- **Shareable scenarios** — every toggle is encoded in the URL; hit **Share** to
+  copy a link that reproduces your exact bracket. Also persists locally.
 
 ## Run it
 
-It's plain HTML/CSS/JS — no install, no build step. Either:
+Plain HTML/CSS/JS — no install, no build step:
 
 ```bash
-# from this folder
-python3 -m http.server 8000
-# then open http://localhost:8000
+python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
-…or just open `index.html` directly in a browser.
+…or just open `index.html` in a browser.
 
-## Customize
+## Data & accuracy
 
-Opponents, FIFA ranks, and Elo-style strength `rating`s live in
-[`data.js`](./data.js). Edit them to match the real draw and current form — all
-the meters, probabilities, and the key-match pick recompute from those numbers.
-The USA baseline strength is `USA_RATING` at the top of that file.
+- **Real:** Group D opponents, dates, venues, and FIFA rankings (June 2026), and
+  the bracket rule that 1D and 2D take different Round-of-32 paths.
+- **Projected (flagged `proj`):** knockout *opponents* past the Round of 32 —
+  the real foes depend on results still to come.
+
+All opponents and Elo-style FIFA-points `rating`s live in [`data.js`](./data.js).
+Edit them as the tournament unfolds — every meter, probability, and the
+key-match pick recompute from those numbers. USA's baseline is `USA_RATING`.
 
 ## Files
 
-| File         | Purpose                                            |
-| ------------ | -------------------------------------------------- |
-| `index.html` | Page structure                                     |
-| `styles.css` | Styling (USA navy/red theme)                       |
-| `data.js`    | Match + opponent data and ratings                  |
-| `app.js`     | Simulator logic, analysis math, and rendering      |
-
-> Ratings and projected knockout opponents are an editable projection, not an
-> official bracket.
+| File         | Purpose                                                |
+| ------------ | ------------------------------------------------------ |
+| `index.html` | Page structure                                         |
+| `styles.css` | Styling (USA navy/red theme)                           |
+| `data.js`    | Real group data + both projected knockout paths        |
+| `app.js`     | Simulator logic, analysis math, paths, sharing, render |

@@ -1,25 +1,29 @@
 /*
  * USA Path to Glory — data model for the 2026 FIFA World Cup
  *
- * The 2026 tournament uses a 48-team format: 12 groups of 4, with the top two
- * from each group plus the eight best third-placed teams advancing to a
- * Round of 32, then R16, Quarterfinal, Semifinal and Final.
+ * GROUP STAGE DATA IS REAL (Final Draw, 5 Dec 2025): the USA co-hosts and was
+ * drawn into Group D with Paraguay, Australia and Türkiye. Dates, venues and
+ * FIFA rankings below are the real ones.
  *
- * The USA co-hosts, so it is seeded into Group D as A1/D1 here. Opponents and
- * FIFA strength ratings below are a plausible projection used to drive the
- * simulator — edit them freely as the real draw and form settle.
+ * KNOCKOUTS DIVERGE BY GROUP FINISH — this is the heart of the strategy:
+ *   • Win Group D (1D)  → Round of 32 in Santa Clara vs a best-third qualifier
+ *                         (from Groups B/E/F/I/J): a softer, winnable draw.
+ *   • Finish 2nd (2D)   → Round of 32 in Dallas vs the Group G runner-up
+ *                         (Belgium's group): a brutal early test.
+ * So the single biggest thing USA can do to ease the road is WIN THE GROUP.
  *
- * `rating` is an Elo-style strength score (higher = stronger). USA is the
- * baseline the competitiveness math compares every opponent against.
+ * Knockout OPPONENTS past the Round of 32 are projections (the real foes depend
+ * on results still to come) and are flagged `projected: true`. Edit any number
+ * in this file and every meter, probability and the key-match pick recomputes.
+ *
+ * `rating` is the team's FIFA ranking points (an Elo-style strength score the
+ * competitiveness math compares against the USA baseline).
  */
 
-const USA_RATING = 1640; // FIFA strength rating for the USMNT (approx. rank 16)
+const USA_RATING = 1659; // USMNT — FIFA rank 17 (June 2026)
 
-// Each match on USA's road to the final.
-// stage:   label for the round
-// type:    "group" (points-based) or "knockout" (win-or-out)
-// opponent fields describe the projected foe and their pedigree.
-const MATCHES = [
+// ---- Group D — REAL fixtures -------------------------------------------------
+const GROUP_MATCHES = [
   {
     id: "g1",
     stage: "Group D · Matchday 1",
@@ -30,9 +34,9 @@ const MATCHES = [
       name: "Paraguay",
       code: "PAR",
       flag: "🇵🇾",
-      rating: 1490,
-      fifaRank: 56,
-      note: "Gritty CONMEBOL side — winnable but never a gift.",
+      rating: 1500,
+      fifaRank: 41,
+      note: "Lowest-ranked side in the group — the must-win.",
     },
   },
   {
@@ -42,72 +46,79 @@ const MATCHES = [
     venue: "Lumen Field, Seattle",
     date: "2026-06-19",
     opponent: {
-      name: "Senegal",
-      code: "SEN",
-      flag: "🇸🇳",
-      rating: 1610,
-      fifaRank: 19,
-      note: "Athletic, deep, and dangerous. The group decider.",
+      name: "Australia",
+      code: "AUS",
+      flag: "🇦🇺",
+      rating: 1588,
+      fifaRank: 27,
+      note: "Organized, physical Socceroos — a real banana skin.",
     },
   },
   {
     id: "g3",
     stage: "Group D · Matchday 3",
     type: "group",
-    venue: "Levi's Stadium, San Francisco",
+    venue: "SoFi Stadium, Los Angeles",
     date: "2026-06-25",
     opponent: {
-      name: "South Korea",
-      code: "KOR",
-      flag: "🇰🇷",
-      rating: 1560,
-      fifaRank: 23,
-      note: "Relentless pressers led by world-class attackers.",
+      name: "Türkiye",
+      code: "TUR",
+      flag: "🇹🇷",
+      rating: 1622,
+      fifaRank: 22,
+      note: "Top-seed-quality talent — likely decides who wins the group.",
     },
   },
+];
+
+// ---- Knockout path A — WIN GROUP D (1D): the softer road ---------------------
+const PATH_WIN_GROUP = [
   {
     id: "r32",
     stage: "Round of 32",
     type: "knockout",
-    venue: "AT&T Stadium, Dallas",
-    date: "2026-06-30",
+    venue: "Levi's Stadium, Santa Clara",
+    date: "2026-07-01",
     opponent: {
-      name: "Mexico (proj.)",
-      code: "MEX",
-      flag: "🇲🇽",
-      rating: 1655,
-      fifaRank: 14,
-      note: "El Tri on neutral-but-hostile turf. A rivalry knockout.",
+      name: "Best-third qualifier",
+      code: "3RD",
+      flag: "🎟️",
+      rating: 1545,
+      fifaRank: null,
+      projected: true,
+      note: "A best-third side from Groups B/E/F/I/J — beatable on form.",
     },
   },
   {
     id: "r16",
     stage: "Round of 16",
     type: "knockout",
-    venue: "Mercedes-Benz Stadium, Atlanta",
-    date: "2026-07-04",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-05",
     opponent: {
-      name: "Netherlands (proj.)",
-      code: "NED",
-      flag: "🇳🇱",
-      rating: 1715,
-      fifaRank: 7,
-      note: "Total-football pedigree and ruthless in transition.",
+      name: "Japan (proj.)",
+      code: "JPN",
+      flag: "🇯🇵",
+      rating: 1655,
+      fifaRank: 18,
+      projected: true,
+      note: "Sharp, well-drilled — a coin-flip knockout.",
     },
   },
   {
     id: "qf",
     stage: "Quarterfinal",
     type: "knockout",
-    venue: "MetLife Stadium, New York/NJ",
+    venue: "Mercedes-Benz Stadium, Atlanta",
     date: "2026-07-10",
     opponent: {
-      name: "Brazil (proj.)",
-      code: "BRA",
-      flag: "🇧🇷",
-      rating: 1840,
-      fifaRank: 3,
-      note: "Five-time champions. This is where legends are made.",
+      name: "Netherlands (proj.)",
+      code: "NED",
+      flag: "🇳🇱",
+      rating: 1758,
+      fifaRank: 7,
+      projected: true,
+      note: "Total-football pedigree — the step up to the elite.",
     },
   },
   {
@@ -117,33 +128,123 @@ const MATCHES = [
     venue: "AT&T Stadium, Dallas",
     date: "2026-07-14",
     opponent: {
-      name: "France (proj.)",
-      code: "FRA",
-      flag: "🇫🇷",
-      rating: 1865,
-      fifaRank: 2,
-      note: "Tournament machine with match-winners everywhere.",
+      name: "Brazil (proj.)",
+      code: "BRA",
+      flag: "🇧🇷",
+      rating: 1761,
+      fifaRank: 6,
+      projected: true,
+      note: "Five-time champions. This is where legends are made.",
     },
   },
   {
     id: "final",
     stage: "Final",
     type: "knockout",
-    venue: "MetLife Stadium, New York/NJ",
+    venue: "MetLife Stadium, New York / New Jersey",
     date: "2026-07-19",
     opponent: {
       name: "Argentina (proj.)",
       code: "ARG",
       flag: "🇦🇷",
-      rating: 1880,
+      rating: 1875,
       fifaRank: 1,
+      projected: true,
       note: "Reigning champions. One game for everything.",
     },
   },
 ];
 
-// Make available to app.js whether loaded as a module or plain script.
+// ---- Knockout path B — FINISH 2ND (2D): the brutal road ----------------------
+const PATH_RUNNER_UP = [
+  {
+    id: "r32",
+    stage: "Round of 32",
+    type: "knockout",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-02",
+    opponent: {
+      name: "Belgium (proj.)",
+      code: "BEL",
+      flag: "🇧🇪",
+      rating: 1735,
+      fifaRank: 9,
+      projected: true,
+      note: "Group G runner-up — a top-10 side as your FIRST knockout game.",
+    },
+  },
+  {
+    id: "r16",
+    stage: "Round of 16",
+    type: "knockout",
+    venue: "Lincoln Financial Field, Philadelphia",
+    date: "2026-07-04",
+    opponent: {
+      name: "Germany (proj.)",
+      code: "GER",
+      flag: "🇩🇪",
+      rating: 1730,
+      fifaRank: 10,
+      projected: true,
+      note: "Tournament aristocracy — no margin for error.",
+    },
+  },
+  {
+    id: "qf",
+    stage: "Quarterfinal",
+    type: "knockout",
+    venue: "MetLife Stadium, New York / New Jersey",
+    date: "2026-07-11",
+    opponent: {
+      name: "Spain (proj.)",
+      code: "ESP",
+      flag: "🇪🇸",
+      rating: 1876,
+      fifaRank: 2,
+      projected: true,
+      note: "World No. 2 and possession kings — a mountain.",
+    },
+  },
+  {
+    id: "sf",
+    stage: "Semifinal",
+    type: "knockout",
+    venue: "AT&T Stadium, Dallas",
+    date: "2026-07-15",
+    opponent: {
+      name: "France (proj.)",
+      code: "FRA",
+      flag: "🇫🇷",
+      rating: 1877,
+      fifaRank: 3,
+      projected: true,
+      note: "Match-winners everywhere. A semifinal for the ages.",
+    },
+  },
+  {
+    id: "final",
+    stage: "Final",
+    type: "knockout",
+    venue: "MetLife Stadium, New York / New Jersey",
+    date: "2026-07-19",
+    opponent: {
+      name: "Argentina (proj.)",
+      code: "ARG",
+      flag: "🇦🇷",
+      rating: 1875,
+      fifaRank: 1,
+      projected: true,
+      note: "Reigning champions. One game for everything.",
+    },
+  },
+];
+
+// Expose to app.js (plain-script load).
 if (typeof window !== "undefined") {
   window.USA_RATING = USA_RATING;
-  window.MATCHES = MATCHES;
+  window.GROUP_MATCHES = GROUP_MATCHES;
+  window.PATH_WIN_GROUP = PATH_WIN_GROUP;
+  window.PATH_RUNNER_UP = PATH_RUNNER_UP;
+  // Backwards-compatible default path used before a group finish is known.
+  window.MATCHES = GROUP_MATCHES.concat(PATH_WIN_GROUP);
 }
