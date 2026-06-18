@@ -81,10 +81,80 @@ function decodeStateFromHash() {
 
 let state = loadState();
 
+/* ------------------------------- live data ------------------------------- */
+// Real Group D standings + finished results, overlaid on the bundled defaults.
+let live = null;
+let liveStatus = { state: "loading" }; // loading | live | fallback | off
+let liveUsaRating = null;
+let liveScores = {}; // matchId -> { result, usaGoals, oppGoals }
+let liveStandings = null;
+
+function currentUsaRating() {
+  return typeof liveUsaRating === "number" ? liveUsaRating : window.USA_RATING;
+}
+
+function validateLive(d) {
+  if (!d || typeof d !== "object") return false;
+  const s = d.group && d.group.standings;
+  if (!Array.isArray(s) || s.length < 4) return false;
+  return s.every((row) => row && typeof row.points === "number" && typeof row.team === "string");
+}
+
+function applyLive(d) {
+  live = d;
+  liveStatus = { state: "live", at: d.generatedAt || null, source: d.source || "live" };
+  if (typeof d.usaRating === "number") liveUsaRating = d.usaRating;
+  liveScores = {};
+  const ums = (d.group && d.group.usaMatches) || [];
+  ums.forEach((um) => {
+    if (um.status === "finished" && um.result) {
+      state.group[um.id] = um.result; // real results override toggles
+      liveScores[um.id] = { result: um.result, usaGoals: um.usaGoals, oppGoals: um.oppGoals };
+    }
+  });
+  liveStandings = (d.group && d.group.standings) || null;
+}
+
+async function fetchLive() {
+  const cfg = window.LIVE_CONFIG;
+  if (!cfg || !cfg.enabled) {
+    liveStatus = { state: "off" };
+    return;
+  }
+  try {
+    const url = cfg.url + (cfg.url.includes("?") ? "&" : "?") + "cb=" + Date.now();
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!validateLive(data)) throw new Error("unexpected data shape");
+    applyLive(data);
+  } catch (e) {
+    liveStatus = { state: "fallback", error: String((e && e.message) || e) };
+  }
+  render();
+}
+
+// A finished, real result for a match (locks the toggle), or null.
+function finishedFor(m) {
+  return m.type === "group" ? liveScores[m.id] || null : null;
+}
+
+function timeAgo(iso) {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (isNaN(then)) return "";
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return mins + "m ago";
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return hrs + "h ago";
+  return Math.round(hrs / 24) + "d ago";
+}
+
 /* ----------------------------- analysis math ----------------------------- */
 
 function usaWinProb(opponentRating) {
-  const gap = window.USA_RATING - opponentRating;
+  const gap = currentUsaRating() - opponentRating;
   return 1 / (1 + Math.pow(10, -gap / 400));
 }
 
@@ -184,22 +254,28 @@ function matchCard(m, topKeyId, eliminated) {
   const stk = stakes(m);
   const winP = Math.round(usaWinProb(m.opponent.rating) * 100);
   const isKey = m.id + m.type === topKeyId;
-  const result = getResult(m);
+  const fin = finishedFor(m);
+  const result = fin ? fin.result : getResult(m);
+  const locked = !!fin;
   const rank = m.opponent.fifaRank ? `#${m.opponent.fifaRank}` : "—";
 
   const toggle = RESULTS.map(
     (r) =>
-      `<button class="toggle-btn ${r} ${result === r ? "active" : ""}" data-match="${m.id}" data-type="${m.type}" data-result="${r}">${RESULT_LABEL[r]}</button>`
+      `<button class="toggle-btn ${r} ${result === r ? "active" : ""}" data-match="${m.id}" data-type="${m.type}" data-result="${r}"${locked ? " disabled" : ""}>${RESULT_LABEL[r]}</button>`
   ).join("");
 
+  const scoreChip = fin
+    ? `<span class="chip score-chip ${fin.result}">FT ${fin.usaGoals}–${fin.oppGoals}</span>`
+    : "";
+
   return `
-    <article class="match-card ${isKey ? "key" : ""} ${result} ${eliminated ? "dim" : ""}" data-id="${m.id}">
+    <article class="match-card ${isKey ? "key" : ""} ${result} ${eliminated ? "dim" : ""} ${locked ? "locked" : ""}" data-id="${m.id}">
       <div class="match-head">
         <div class="match-stage">
           <span class="stage-label">${m.stage}</span>
           <span class="stage-meta">${m.date} · ${m.venue}</span>
         </div>
-        ${isKey ? `<span class="chip key-chip">⭐ KEY MATCH</span>` : ""}
+        <div class="head-chips">${scoreChip}${isKey ? `<span class="chip key-chip">⭐ KEY MATCH</span>` : ""}</div>
       </div>
       <div class="match-body">
         <div class="opponent">
@@ -218,7 +294,9 @@ function matchCard(m, topKeyId, eliminated) {
       </div>
       <div class="match-foot">
         <div class="toggle">${toggle}</div>
-        <span class="type-tag ${m.type}">${m.type === "group" ? "Group · points" : "Knockout · win or out"}</span>
+        <span class="type-tag ${m.type}">${
+          locked ? "✓ Final result (live)" : m.type === "group" ? "Group · points" : "Knockout · win or out"
+        }</span>
       </div>
     </article>`;
 }
@@ -262,8 +340,9 @@ function renderMatches() {
     <h3 class="section-h">Knockout road — ${PATHS[activePathKey()].label} <span class="proj-tag">projected opponents</span></h3>
     ${koHtml}`;
 
-  // Wire toggles.
+  // Wire toggles (disabled buttons are real, finished results — ignore clicks).
   document.querySelectorAll(".toggle-btn").forEach((btn) => {
+    if (btn.disabled) return;
     btn.addEventListener("click", () => {
       const list = btn.dataset.type === "group" ? GROUP_MATCHES : PATHS[activePathKey()].matches();
       const m = list.find((x) => x.id === btn.dataset.match);
@@ -382,8 +461,86 @@ function renderBriefing() {
   document.getElementById("briefing").innerHTML = `<h2>What USA needs to do</h2><ul>${items.join("")}</ul>`;
 }
 
+// Live status strip + manual refresh.
+function renderLiveBar() {
+  const el = document.getElementById("livebar");
+  if (!el) return;
+  let dot, text, cls;
+  if (liveStatus.state === "live") {
+    cls = "on";
+    dot = "🔴";
+    const src = liveStatus.source ? ` · ${liveStatus.source}` : "";
+    text = `LIVE standings — updated ${timeAgo(liveStatus.at) || "now"}${src}`;
+  } else if (liveStatus.state === "loading") {
+    cls = "loading";
+    dot = "⏳";
+    text = "Fetching live standings…";
+  } else if (liveStatus.state === "off") {
+    cls = "off";
+    dot = "⚪";
+    text = "Live updates off — using built-in projection";
+  } else {
+    cls = "off";
+    dot = "⚠️";
+    text = "Live feed unavailable — showing built-in projection";
+  }
+  el.className = `livebar ${cls}`;
+  el.innerHTML = `
+    <span class="live-dot">${dot}</span>
+    <span class="live-text">${text}</span>
+    <button id="refresh" class="live-refresh" ${liveStatus.state === "loading" ? "disabled" : ""}>↻ Refresh</button>`;
+  const btn = document.getElementById("refresh");
+  if (btn)
+    btn.addEventListener("click", () => {
+      liveStatus = { state: "loading" };
+      renderLiveBar();
+      fetchLive();
+    });
+}
+
+// Live Group D table (only when we have real standings).
+function renderStandings() {
+  const el = document.getElementById("standings");
+  if (!el) return;
+  if (!liveStandings) {
+    el.innerHTML = "";
+    return;
+  }
+  const rows = liveStandings
+    .slice()
+    .sort((a, b) => b.points - a.points || (b.gd || 0) - (a.gd || 0) || (b.gf || 0) - (a.gf || 0))
+    .map((r, i) => {
+      const isUSA = (r.code || "").toUpperCase() === "USA" || /united states|usa/i.test(r.team);
+      const cut = i < 2 ? "q" : i === 2 ? "q3" : "";
+      return `<tr class="${isUSA ? "usa" : ""} ${cut}">
+        <td class="pos">${i + 1}</td>
+        <td class="team">${r.team}${isUSA ? " 🇺🇸" : ""}</td>
+        <td>${r.played || 0}</td>
+        <td>${r.win || 0}</td>
+        <td>${r.draw || 0}</td>
+        <td>${r.loss || 0}</td>
+        <td>${r.gf || 0}</td>
+        <td>${r.ga || 0}</td>
+        <td>${(r.gd || 0) > 0 ? "+" : ""}${r.gd || 0}</td>
+        <td class="pts">${r.points}</td>
+      </tr>`;
+    })
+    .join("");
+  el.innerHTML = `
+    <h3 class="section-h">Group D — live table <span class="real-tag">live</span></h3>
+    <div class="table-wrap">
+      <table class="standings-table">
+        <thead><tr><th>#</th><th class="team">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="table-key"><span class="k q"></span>Top 2 advance <span class="k q3"></span>3rd → best-third race</div>`;
+}
+
 function render() {
+  renderLiveBar();
   renderSummary();
+  renderStandings();
   renderMatches();
   renderBriefing();
 }
@@ -441,5 +598,6 @@ function flash(msg) {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupControls();
-  render();
+  render(); // instant paint with bundled defaults…
+  fetchLive(); // …then overlay real, current standings.
 });
