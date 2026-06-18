@@ -3,562 +3,1006 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>USA Path to Glory · 2026 World Cup Simulator</title>
+    <title>Path to Glory · USA at the 2026 World Cup</title>
+    <meta
+      name="description"
+      content="Live Group D standings and an interactive map of the USA's road through the 2026 World Cup — the knockout draw forks at the group finish."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
+/*
+ * PATH TO GLORY — visual system
+ * Direction: "floodlit stadium at night / broadcast graphics."
+ * Signature: a route spine where matches are stations and the line forks
+ * at the group finish into two diverging knockout roads.
+ */
+
 :root {
-  --navy: #0a1733;
-  --navy-2: #10224a;
-  --red: #e23636;
-  --red-dk: #b81e1e;
-  --white: #ffffff;
-  --ink: #0a1733;
-  --muted: #6b7a99;
-  --line: #e3e8f2;
-  --comp: #2e8b57;
-  --stakes: #e2a236;
-  --winp: #2f6fed;
-  --gold: #f5c542;
-  --bg: #f5f7fb;
-  --shadow: 0 6px 24px rgba(10, 23, 51, 0.08);
-  --radius: 16px;
+  /* pitch / surfaces */
+  --pitch: #0a0f1f;
+  --pitch-2: #0c1326;
+  --panel: #111a32;
+  --panel-2: #16203d;
+  --line: rgba(233, 240, 251, 0.09);
+  --line-2: rgba(233, 240, 251, 0.16);
+
+  /* ink */
+  --chalk: #eaf0fb;
+  --steel: #93a2c4;
+  --steel-2: #5f6f92;
+
+  /* meaningful accents */
+  --flood: #3f8cff; /* data / interactive / win-probability */
+  --usa: #ff4655; /* USA identity / loss / elimination */
+  --grass: #2fc16b; /* win / advance */
+  --amber: #e6a93c; /* draw */
+  --glory: #f5c452; /* RESERVED: champion + the win-the-group road */
+
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  --r: 14px;
+
+  --display: "Anton", "Arial Narrow", system-ui, sans-serif;
+  --body: "Hanken Grotesk", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 * {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial,
-    sans-serif;
-  background: var(--bg);
-  color: var(--ink);
-  line-height: 1.5;
+html {
+  scroll-behavior: smooth;
 }
 
-/* ---------------------------------- hero --------------------------------- */
+body {
+  margin: 0;
+  font-family: var(--body);
+  color: var(--chalk);
+  line-height: 1.55;
+  background-color: var(--pitch);
+  /* faint floodlit haze + a single chalk pitch-line down the page */
+  background-image: radial-gradient(
+    900px 520px at 50% -8%,
+    rgba(63, 140, 255, 0.16),
+    transparent 70%
+  );
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--flood);
+}
+
+/* shared eyebrow / label vocabulary (broadcast lower-third) */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+/* --------------------------------- hero ---------------------------------- */
 .hero {
-  background: radial-gradient(
-      1200px 400px at 80% -10%,
-      rgba(226, 54, 54, 0.35),
-      transparent 60%
-    ),
-    linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
-  color: var(--white);
-  padding: 48px 20px 56px;
+  position: relative;
+  overflow: hidden;
+  padding: 60px 22px 40px;
+  border-bottom: 1px solid var(--line);
+}
+/* faint chalk touchline running through the hero into the page */
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  width: 2px;
+  height: 40px;
+  background: linear-gradient(var(--steel-2), transparent);
+  opacity: 0.6;
 }
 .hero-inner {
-  max-width: 980px;
+  max-width: 760px;
   margin: 0 auto;
 }
-.badge {
-  display: inline-block;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 6px 14px;
-  border-radius: 999px;
+.hero .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .hero h1 {
-  font-size: clamp(38px, 7vw, 68px);
-  margin: 16px 0 8px;
-  line-height: 1.02;
-  letter-spacing: -0.02em;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(56px, 15vw, 132px);
+  line-height: 0.86;
+  letter-spacing: 0.01em;
+  margin: 14px 0 0;
+  text-transform: uppercase;
+}
+.hero h1 .glow {
+  color: var(--glory);
+  text-shadow: 0 0 38px rgba(245, 196, 82, 0.45);
 }
 .tagline {
-  max-width: 620px;
-  color: #c7d2e8;
-  font-size: 17px;
-  margin: 0 0 24px;
+  max-width: 560px;
+  color: var(--steel);
+  font-size: 16.5px;
+  margin: 18px 0 26px;
 }
+.tagline b {
+  color: var(--chalk);
+  font-weight: 700;
+}
+
 .controls {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .ctrl {
   cursor: pointer;
-  border: none;
+  font-family: var(--body);
   font-weight: 700;
-  font-size: 15px;
-  padding: 12px 22px;
+  font-size: 14px;
+  padding: 11px 20px;
   border-radius: 999px;
-  background: var(--red);
+  border: 1px solid var(--usa);
+  background: var(--usa);
   color: #fff;
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s;
-  box-shadow: 0 6px 18px rgba(226, 54, 54, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s,
+    border-color 0.15s;
 }
 .ctrl:hover {
   transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(255, 70, 85, 0.32);
 }
 .ctrl.ghost {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--chalk);
+}
+.ctrl.ghost:hover {
+  border-color: var(--chalk);
   box-shadow: none;
 }
 
 /* --------------------------------- layout -------------------------------- */
 main {
-  max-width: 980px;
-  margin: -32px auto 0;
-  padding: 0 20px 40px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 26px 22px 56px;
 }
 
-/* -------------------------------- summary -------------------------------- */
-.summary {
-  background: #fff;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px 28px;
+/* shared section heading */
+.section-h {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--steel);
+  margin: 34px 2px 16px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  border-left: 8px solid var(--muted);
+  gap: 10px;
 }
-.summary.champ {
-  border-left-color: var(--gold);
-  background: linear-gradient(180deg, #fffdf3, #fff);
+.section-h::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--usa);
 }
-.summary.out {
-  border-left-color: var(--red);
+.real-tag,
+.proj-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 2px 7px;
+  border-radius: 4px;
 }
-.summary.live {
-  border-left-color: var(--winp);
+.real-tag {
+  color: var(--grass);
+  border: 1px solid rgba(47, 193, 107, 0.4);
 }
-.verdict {
+.proj-tag {
+  color: var(--steel);
+  border: 1px solid var(--line-2);
+}
+.proj {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: var(--steel);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  padding: 0 4px;
+  vertical-align: middle;
+}
+
+/* ------------------------------- live ribbon ----------------------------- */
+.livebar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 9px 9px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--steel);
+}
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--steel);
+  flex: none;
+}
+.livebar.on .live-dot {
+  background: var(--usa);
+  box-shadow: 0 0 0 0 rgba(255, 70, 85, 0.6);
+  animation: ping 1.8s ease-out infinite;
+}
+.livebar.on .live-text {
+  color: var(--chalk);
+}
+@keyframes ping {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 70, 85, 0.5);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px rgba(255, 70, 85, 0);
+  }
+}
+.live-text {
+  flex: 1;
+}
+.live-refresh {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--chalk);
+  padding: 6px 12px;
+  border-radius: 999px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.live-refresh:hover {
+  border-color: var(--chalk);
+}
+.live-refresh:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ----------------------------- verdict banner ---------------------------- */
+.summary {
+  margin-top: 16px;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 24px 26px;
+  position: relative;
+  overflow: hidden;
+}
+.summary::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--steel-2);
+}
+.summary.champ::before {
+  background: var(--glory);
+}
+.summary.out::before {
+  background: var(--usa);
+}
+.summary.live::before {
+  background: var(--flood);
+}
+.verdict-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--steel);
 }
 .verdict-main {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-family: var(--display);
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: clamp(30px, 7vw, 50px);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  margin: 8px 0 6px;
+}
+.summary.champ .verdict-main {
+  color: var(--glory);
+  text-shadow: 0 0 30px rgba(245, 196, 82, 0.4);
+}
+.summary.out .verdict-main {
+  color: var(--usa);
 }
 .verdict-sub {
-  color: var(--muted);
-  font-size: 15px;
+  color: var(--steel);
+  font-size: 14.5px;
+  max-width: 50ch;
 }
 .summary-stats {
   display: flex;
-  gap: 26px;
   flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 .stat {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
 }
 .stat-num {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--navy);
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--chalk);
+  line-height: 1.1;
 }
 .stat-lbl {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-}
-
-/* -------------------------------- briefing ------------------------------- */
-.briefing {
-  background: #fff;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 8px 28px 20px;
-  margin-top: 18px;
-}
-.briefing h2 {
-  font-size: 18px;
-  margin: 18px 0 10px;
-}
-.briefing ul {
-  margin: 0;
-  padding-left: 20px;
-}
-.briefing li {
-  margin: 8px 0;
-  color: #2a3a5c;
-  font-size: 15px;
-}
-.briefing strong {
-  color: var(--navy);
-}
-
-/* --------------------------------- legend -------------------------------- */
-.legend {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin: 24px 2px 12px;
-  font-size: 13px;
-  color: var(--muted);
-}
-.dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 5px;
-  vertical-align: middle;
-}
-.dot.comp {
-  background: var(--comp);
-}
-.dot.stakes {
-  background: var(--stakes);
-}
-.dot.winp {
-  background: var(--winp);
-}
-.legend-key {
-  margin-left: auto;
-  font-weight: 600;
-  color: var(--navy);
-}
-
-/* -------------------------------- matches -------------------------------- */
-.matches {
-  display: grid;
-  gap: 16px;
-}
-.match-card {
-  background: #fff;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 18px 20px;
-  border: 2px solid transparent;
-  transition: border-color 0.15s, transform 0.12s;
-}
-.match-card.win {
-  border-left: 6px solid var(--comp);
-}
-.match-card.draw {
-  border-left: 6px solid var(--stakes);
-}
-.match-card.loss {
-  border-left: 6px solid var(--red);
-}
-.match-card.key {
-  border-color: var(--gold);
-  box-shadow: 0 8px 28px rgba(245, 197, 66, 0.35);
-}
-.match-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.stage-label {
-  display: block;
-  font-weight: 800;
-  font-size: 16px;
-  color: var(--navy);
-}
-.stage-meta {
-  font-size: 12.5px;
-  color: var(--muted);
-}
-.chip {
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 5px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.key-chip {
-  background: var(--gold);
-  color: #5a4500;
-}
-
-.match-body {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 20px;
-  margin: 16px 0;
-  align-items: center;
-}
-.opponent {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.flag {
-  font-size: 34px;
-  line-height: 1;
-}
-.opp-text {
-  display: flex;
-  flex-direction: column;
-}
-.opp-name {
-  font-weight: 700;
-  font-size: 17px;
-}
-.vs {
-  color: var(--muted);
-  font-weight: 500;
-  font-size: 13px;
-}
-.opp-note {
-  font-size: 13px;
-  color: var(--muted);
-}
-.opp-rank {
-  margin-left: auto;
-  text-align: center;
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 6px 10px;
-}
-.rank-num {
-  display: block;
-  font-weight: 800;
-  color: var(--navy);
-}
-.rank-lbl {
+  font-family: var(--mono);
   font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin-top: 4px;
 }
 
-.metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
+/* ----------------------------- standings table --------------------------- */
+.standings {
+  margin-top: 6px;
 }
-.metric-top {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12.5px;
-  color: var(--muted);
-  margin-bottom: 3px;
-}
-.metric-top span:last-child {
-  font-weight: 700;
-  color: var(--ink);
-}
-.meter {
-  height: 8px;
-  background: var(--line);
-  border-radius: 999px;
+.table-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
   overflow: hidden;
 }
-.meter-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.35s ease;
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
 }
-.meter-fill.comp {
-  background: var(--comp);
+.standings-table th,
+.standings-table td {
+  padding: 11px 8px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 13px;
 }
-.meter-fill.stakes {
-  background: var(--stakes);
+.standings-table thead th {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--steel);
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--line);
 }
-.meter-fill.winp {
-  background: var(--winp);
+.standings-table td {
+  border-bottom: 1px solid var(--line);
+  color: var(--steel);
+}
+.standings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.standings-table td.team,
+.standings-table th.team {
+  text-align: left;
+  font-family: var(--body);
+  font-weight: 600;
+  color: var(--chalk);
+}
+.standings-table td.pos {
+  color: var(--steel-2);
+}
+.standings-table td.pts {
+  color: var(--chalk);
+  font-weight: 700;
+}
+.standings-table tr.usa {
+  background: rgba(255, 70, 85, 0.08);
+}
+.standings-table tr.usa td.team {
+  box-shadow: inset 3px 0 0 var(--usa);
+}
+.standings-table tr.q td.pos {
+  color: var(--grass);
+}
+.standings-table tr.q3 td.pos {
+  color: var(--amber);
+}
+.table-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--steel);
+  margin: 10px 2px 0;
+}
+.table-key .k {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.table-key .k.q {
+  background: var(--grass);
+}
+.table-key .k.q3 {
+  background: var(--amber);
+  margin-left: 12px;
 }
 
-.match-foot {
+/* ================================ THE ROUTE ============================== */
+/* The signature: a spine with stations that forks at the group finish. */
+.tl-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.station {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: start;
+}
+/* rail column + connector segment (colored per phase via --seg) */
+.rail {
+  position: relative;
+  align-self: stretch;
+}
+.rail::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  bottom: -16px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--seg, var(--steel-2));
+}
+.tl-phase.group {
+  --seg: var(--steel-2);
+}
+.tl-phase.knockout.track-win {
+  --seg: var(--glory);
+}
+.tl-phase.knockout.track-runnerup {
+  --seg: var(--usa);
+}
+.tl-phase > .station:first-child .rail::before {
+  top: 26px;
+}
+.station.terminus .rail::before {
+  bottom: auto;
+  height: 26px;
+}
+/* node marker */
+.node {
+  position: absolute;
+  left: 50%;
+  top: 26px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--pitch);
+  border: 2px solid var(--steel-2);
+  z-index: 1;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+}
+.station.win .node {
+  border-color: var(--grass);
+  background: var(--grass);
+}
+.station.draw .node {
+  border-color: var(--amber);
+  background: var(--amber);
+}
+.station.loss .node {
+  border-color: var(--usa);
+  background: var(--usa);
+}
+.station.locked .node {
+  box-shadow: 0 0 0 4px rgba(234, 240, 251, 0.08);
+}
+.station.key .node {
+  border-color: var(--glory);
+  box-shadow: 0 0 0 5px rgba(245, 196, 82, 0.18);
+  animation: keypulse 2s ease-in-out infinite;
+}
+.station.champ .node {
+  width: 26px;
+  height: 26px;
+  background: var(--glory);
+  border-color: var(--glory);
+  box-shadow: 0 0 26px rgba(245, 196, 82, 0.55);
+}
+@keyframes keypulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 5px rgba(245, 196, 82, 0.16);
+  }
+  50% {
+    box-shadow: 0 0 0 9px rgba(245, 196, 82, 0.04);
+  }
+}
+
+/* station card */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 15px 17px;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.station:hover .card {
+  transform: translateY(-2px);
+  border-color: var(--line-2);
+}
+.station:hover .node {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+.station.key .card {
+  border-color: rgba(245, 196, 82, 0.45);
+}
+.station.out .card {
+  opacity: 0.45;
+}
+.station.out .node {
+  background: var(--pitch);
+  border-style: dashed;
+  border-color: var(--usa);
+}
+
+.card-top {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.stage-name {
+  font-family: var(--display);
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: 19px;
+  letter-spacing: 0.02em;
+  color: var(--chalk);
+}
+.md {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--steel);
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 8px;
+}
+.when {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--steel);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fixture {
+  display: flex;
   align-items: center;
   gap: 12px;
+  margin: 13px 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.flag {
+  font-size: 30px;
+  line-height: 1;
+}
+.vs {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.teams {
+  font-weight: 700;
+  font-size: 16px;
+}
+.teams em {
+  font-style: normal;
+  color: var(--steel);
+  font-weight: 400;
+  margin: 0 3px;
+}
+.note {
+  font-size: 12.5px;
+  color: var(--steel);
+}
+.rank {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--steel);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: center;
+}
+.big-prob {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 78px;
+}
+.pct {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--flood);
+}
+.pct i {
+  font-style: normal;
+  font-size: 16px;
+  color: var(--steel);
+}
+.pl {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin-top: 3px;
+}
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  align-items: center;
+}
+.bl {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.bv {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--chalk);
+}
+.track {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.track b {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.track b.comp {
+  background: var(--flood);
+}
+.track b.stakes {
+  background: var(--amber);
+}
+
+.card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-top: 14px;
+}
+.ft {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--pitch);
+}
+.ft.win {
+  background: var(--grass);
+}
+.ft.draw {
+  background: var(--amber);
+}
+.ft.loss {
+  background: var(--usa);
+  color: #fff;
 }
 .toggle {
   display: inline-flex;
-  background: var(--bg);
+  background: var(--pitch-2);
+  border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 4px;
-  gap: 4px;
+  padding: 3px;
+  gap: 2px;
 }
 .toggle-btn {
   cursor: pointer;
   border: none;
   background: transparent;
-  color: var(--muted);
-  font-weight: 800;
-  font-size: 12.5px;
-  letter-spacing: 0.04em;
-  padding: 8px 16px;
+  color: var(--steel);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 7px 13px;
   border-radius: 999px;
-  transition: all 0.12s;
+  transition: color 0.12s, background 0.12s;
 }
-.toggle-btn:hover {
-  color: var(--ink);
+.toggle-btn:hover:not(:disabled) {
+  color: var(--chalk);
 }
 .toggle-btn.active.win {
-  background: var(--comp);
-  color: #fff;
+  background: var(--grass);
+  color: var(--pitch);
 }
 .toggle-btn.active.draw {
-  background: var(--stakes);
-  color: #fff;
+  background: var(--amber);
+  color: var(--pitch);
 }
 .toggle-btn.active.loss {
-  background: var(--red);
+  background: var(--usa);
   color: #fff;
 }
-.type-tag {
+.toggle-btn:disabled {
+  cursor: default;
+}
+.station.locked .toggle-btn:not(.active) {
+  opacity: 0.3;
+}
+.tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+.key-tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--glory);
+}
+
+/* --------------------------------- fork ---------------------------------- */
+.fork {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  margin: 4px 0;
+}
+.fork-rail {
+  position: relative;
+}
+.fork-rail::before {
+  /* incoming line from the group spine */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  height: 30px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--steel-2);
+}
+.fork-node {
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--pitch);
+  border: 2px solid var(--chalk);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
   font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
+  color: var(--chalk);
+  z-index: 1;
+}
+.fork-body {
+  padding-top: 6px;
+}
+.fork-head {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--chalk);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.fork-head span {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--steel);
+  font-size: 12px;
+}
+.branches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0 10px;
+}
+.branch {
+  cursor: pointer;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.branch:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-2);
+}
+.branch .br-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+.branch .br-dest {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--steel);
+  line-height: 1.4;
+}
+.branch .br-prob {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.branch .br-prob.good {
+  color: var(--grass);
+}
+.branch .br-prob.bad {
+  color: var(--usa);
+}
+.branch.win.sel {
+  border-color: var(--glory);
+  background: rgba(245, 196, 82, 0.09);
+}
+.branch.runnerup.sel {
+  border-color: var(--usa);
+  background: rgba(255, 70, 85, 0.09);
+}
+.fork-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--steel);
+}
+.fork-foot .auto-note b {
+  color: var(--chalk);
+  font-weight: 700;
+}
+.auto-pick {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--steel);
+  padding: 5px 11px;
+  border-radius: 999px;
+  transition: border-color 0.12s, color 0.12s;
+}
+.auto-pick.on {
+  border-color: var(--flood);
+  color: var(--flood);
+}
+
+/* ------------------------------ manager notes ---------------------------- */
+.briefing {
+  margin-top: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 6px 24px 20px;
+}
+.briefing h2 {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin: 18px 0 6px;
+}
+.briefing ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.briefing li {
+  position: relative;
+  padding: 11px 0 11px 22px;
+  border-bottom: 1px solid var(--line);
+  color: var(--steel);
+  font-size: 14.5px;
+}
+.briefing li:last-child {
+  border-bottom: none;
+}
+.briefing li::before {
+  content: "›";
+  position: absolute;
+  left: 2px;
+  top: 10px;
+  color: var(--usa);
+  font-weight: 700;
+}
+.briefing strong {
+  color: var(--chalk);
 }
 
 /* --------------------------------- footer -------------------------------- */
 .foot {
   text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  padding: 24px 20px 48px;
+  color: var(--steel-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 20px;
+  border-top: 1px solid var(--line);
 }
 .foot a {
-  color: var(--muted);
-}
-
-/* ----------------------------- section headers --------------------------- */
-.section-h {
-  font-size: 15px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--navy);
-  margin: 28px 2px 4px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.real-tag,
-.proj-tag {
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 3px 8px;
-  border-radius: 999px;
-}
-.real-tag {
-  background: #e3f5ea;
-  color: #1c7a45;
-}
-.proj-tag {
-  background: #eef1f8;
-  color: var(--muted);
-}
-.proj {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--muted);
-  background: #eef1f8;
-  border-radius: 4px;
-  padding: 1px 5px;
-  vertical-align: middle;
-}
-
-/* ------------------------------- path bar -------------------------------- */
-.pathbar {
-  background: linear-gradient(135deg, #0d1d40, #15294f);
-  color: #fff;
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  margin: 6px 0 4px;
-  box-shadow: var(--shadow);
-}
-.pathbar-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.pathbar-title {
-  font-weight: 800;
-  font-size: 16px;
-}
-.pathbar-sub {
-  font-weight: 500;
-  font-size: 13px;
-  color: #b9c6e0;
-}
-.path-picker {
-  display: inline-flex;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  padding: 4px;
-  gap: 4px;
-}
-.path-pick {
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  color: #c7d2e8;
-  font-weight: 700;
-  font-size: 12.5px;
-  padding: 7px 14px;
-  border-radius: 999px;
-  transition: all 0.12s;
-}
-.path-pick.on {
-  background: #fff;
-  color: var(--navy);
-}
-.path-compare {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 14px;
-  margin-top: 16px;
-}
-.pc-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: border-color 0.15s, background 0.15s;
-}
-.pc-card.sel {
-  border-color: var(--gold);
-  background: rgba(245, 197, 66, 0.12);
-}
-.pc-head {
-  font-weight: 800;
-  font-size: 14px;
-}
-.pc-body {
-  font-size: 13px;
-  color: #d4ddf0;
-}
-.pc-prob {
-  font-weight: 800;
-  font-size: 13px;
-}
-.pc-prob.good {
-  color: #6ee7a0;
-}
-.pc-prob.bad {
-  color: #ff9b9b;
-}
-.pc-vs {
-  font-size: 11.5px;
-  color: #9fb0d0;
-  text-align: center;
-  max-width: 110px;
-  line-height: 1.3;
-}
-
-/* ----------------------------- eliminated dim ---------------------------- */
-.match-card.dim {
-  opacity: 0.5;
-  filter: grayscale(0.4);
+  color: var(--steel);
 }
 
 /* -------------------------------- flash toast ---------------------------- */
@@ -567,13 +1011,13 @@ main {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: var(--navy);
-  color: #fff;
-  padding: 12px 22px;
+  background: var(--chalk);
+  color: var(--pitch);
+  padding: 11px 20px;
   border-radius: 999px;
   font-weight: 700;
-  font-size: 14px;
-  box-shadow: 0 10px 30px rgba(10, 23, 51, 0.35);
+  font-size: 13.5px;
+  box-shadow: var(--shadow);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
@@ -584,189 +1028,67 @@ main {
   transform: translateX(-50%) translateY(0);
 }
 
-/* -------------------------------- live bar ------------------------------- */
-.livebar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border-radius: 999px;
-  box-shadow: var(--shadow);
-  padding: 10px 14px 10px 16px;
-  margin-bottom: 14px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--navy);
-  border-left: 6px solid var(--muted);
-}
-.livebar.on {
-  border-left-color: var(--red);
-}
-.livebar.loading {
-  border-left-color: var(--winp);
-}
-.livebar.off {
-  border-left-color: var(--stakes);
-}
-.live-dot {
-  font-size: 13px;
-}
-.livebar.on .live-dot {
-  animation: pulse 1.6s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-.live-text {
-  flex: 1;
-}
-.live-refresh {
-  cursor: pointer;
-  border: 1px solid var(--line);
-  background: var(--bg);
-  color: var(--navy);
-  font-weight: 700;
-  font-size: 12.5px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  transition: background 0.12s;
-}
-.live-refresh:hover {
-  background: #e9eef8;
-}
-.live-refresh:disabled {
-  opacity: 0.5;
-  cursor: default;
+/* :focus-visible everywhere */
+:focus-visible {
+  outline: 2px solid var(--flood);
+  outline-offset: 2px;
 }
 
-/* ----------------------------- standings table --------------------------- */
-.standings {
-  margin-top: 18px;
-}
-.table-wrap {
-  background: #fff;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.standings-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-.standings-table th,
-.standings-table td {
-  padding: 10px 8px;
-  text-align: center;
-  border-bottom: 1px solid var(--line);
-}
-.standings-table th {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  background: var(--bg);
-}
-.standings-table td.team,
-.standings-table th.team {
-  text-align: left;
-  font-weight: 600;
-}
-.standings-table td.pos {
-  color: var(--muted);
-}
-.standings-table td.pts {
-  font-weight: 800;
-  color: var(--navy);
-}
-.standings-table tr.usa {
-  background: rgba(47, 111, 237, 0.08);
-}
-.standings-table tr.q td.pos {
-  box-shadow: inset 3px 0 0 var(--comp);
-}
-.standings-table tr.q3 td.pos {
-  box-shadow: inset 3px 0 0 var(--stakes);
-}
-.standings-table tbody tr:last-child td {
-  border-bottom: none;
-}
-.table-key {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-  margin: 8px 2px 0;
-}
-.table-key .k {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  display: inline-block;
-}
-.table-key .k.q {
-  background: var(--comp);
-  margin-right: 2px;
-}
-.table-key .k.q3 {
-  background: var(--stakes);
-  margin: 0 2px 0 10px;
+/* ------------------------------ load reveal ------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+  .reveal.d1 {
+    animation-delay: 0.06s;
+  }
+  .reveal.d2 {
+    animation-delay: 0.14s;
+  }
+  .reveal.d3 {
+    animation-delay: 0.22s;
+  }
+  @keyframes rise {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
-/* ---------------------------- score chip / locked ------------------------ */
-.head-chips {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.score-chip {
-  background: var(--navy);
-  color: #fff;
-}
-.score-chip.win {
-  background: var(--comp);
-}
-.score-chip.draw {
-  background: var(--stakes);
-}
-.score-chip.loss {
-  background: var(--red);
-}
-.match-card.locked .toggle {
-  opacity: 0.85;
-}
-.toggle-btn:disabled {
-  cursor: default;
-}
-.match-card.locked .toggle-btn:not(.active) {
-  opacity: 0.35;
+@media (prefers-reduced-motion: reduce) {
+  .livebar.on .live-dot,
+  .station.key .node {
+    animation: none;
+  }
+  .track b,
+  .card,
+  .node,
+  .branch,
+  .ctrl {
+    transition: none;
+  }
 }
 
-@media (max-width: 680px) {
-  .match-body {
+/* -------------------------------- responsive ----------------------------- */
+@media (max-width: 600px) {
+  .station {
+    grid-template-columns: 34px 1fr;
+  }
+  .readout {
     grid-template-columns: 1fr;
-    gap: 14px;
+    gap: 12px;
   }
-  .summary {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .path-compare {
+  .branches {
     grid-template-columns: 1fr;
   }
-  .pc-vs {
-    max-width: none;
+  .when {
+    display: none;
   }
-  .standings-table {
-    font-size: 12.5px;
-  }
-  .standings-table th,
-  .standings-table td {
-    padding: 8px 5px;
+  .card-top .md {
+    margin-left: 0;
   }
 }
 
@@ -775,18 +1097,17 @@ main {
   <body>
     <header class="hero">
       <div class="hero-inner">
-        <div class="badge">🇺🇸 USMNT · FIFA World Cup 2026</div>
-        <h1>Path to Glory</h1>
-        <p class="tagline">
-          <strong>Live</strong> Group D standings, auto-updated as results come
-          in. Finished games lock to their real scores; toggle the rest and watch
-          two knockout roads diverge — <strong>winning the group</strong> vs
-          finishing 2nd — with the key and most competitive matches flagged.
+        <div class="eyebrow reveal">🇺🇸 United States · FIFA World Cup 26 · Group D</div>
+        <h1 class="reveal d1">Path to<br /><span class="glow">Glory</span></h1>
+        <p class="tagline reveal d2">
+          One map of the USA's whole tournament. Win Group D for the soft side of
+          the draw — finish second and run straight into the wolves. <b>Live
+          standings</b>, your scenario, every result reshaping the road.
         </p>
-        <div class="controls">
+        <div class="controls reveal d3">
+          <button id="reset" class="ctrl">Dream run ★</button>
           <button id="realistic" class="ctrl ghost">Realistic run</button>
-          <button id="reset" class="ctrl">Win it all ✨</button>
-          <button id="share" class="ctrl ghost">🔗 Share scenario</button>
+          <button id="share" class="ctrl ghost">Copy link</button>
         </div>
       </div>
     </header>
@@ -798,28 +1119,21 @@ main {
 
       <section id="standings" class="standings"></section>
 
-      <section id="briefing" class="briefing"></section>
-
-      <div class="legend">
-        <span><i class="dot comp"></i> Competitiveness — how close on paper</span>
-        <span><i class="dot stakes"></i> Stakes — how much is riding on it</span>
-        <span><i class="dot winp"></i> USA win chance</span>
-        <span class="legend-key">⭐ = the single most decisive match</span>
-      </div>
-
       <section id="matches" class="matches"></section>
+
+      <section id="briefing" class="briefing"></section>
     </main>
 
     <footer class="foot">
       <p>
-        Built for fun ·
+        Built for the love of the game ·
         <a
           href="https://code.claude.com/docs/en/claude-code-on-the-web"
           target="_blank"
           rel="noopener"
-          >ratings &amp; opponents are a projection — edit
-          <code>data.js</code> to match the real draw</a
-        >.
+          >live data refreshes automatically</a
+        >
+        · knockout opponents past the Round of 32 are projections
       </p>
     </footer>
 
@@ -1336,10 +1650,28 @@ function activeMatches() {
 
 /* ------------------------------- rendering ------------------------------- */
 
-const meter = (v, kind) =>
-  `<div class="meter" title="${v}/100"><div class="meter-fill ${kind}" style="width:${v}%"></div></div>`;
+// Concise stage name + short badge for the station header.
+function stageBits(m) {
+  if (m.type === "group") {
+    const md = { g1: "1", g2: "2", g3: "3" }[m.id];
+    return { name: `Matchday ${md}`, badge: "Group D" };
+  }
+  const badge = { r32: "R32", r16: "R16", qf: "QF", sf: "SF", final: "Final" }[m.id];
+  return { name: m.stage, badge };
+}
+function shortDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return isNaN(d) ? iso : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function cityOf(venue) {
+  return (venue || "").split(", ").slice(-1)[0];
+}
 
-function matchCard(m, topKeyId, eliminated) {
+const bar = (label, v, kind) =>
+  `<div class="bar"><span class="bl">${label}</span><span class="bv">${v}</span><i class="track"><b class="${kind}" style="width:${v}%"></b></i></div>`;
+
+// A single station on the route spine.
+function matchCard(m, topKeyId, eliminated, opts = {}) {
   const comp = competitiveness(m.opponent.rating);
   const stk = stakes(m);
   const winP = Math.round(usaWinProb(m.opponent.rating) * 100);
@@ -1347,48 +1679,62 @@ function matchCard(m, topKeyId, eliminated) {
   const fin = finishedFor(m);
   const result = fin ? fin.result : getResult(m);
   const locked = !!fin;
-  const rank = m.opponent.fifaRank ? `#${m.opponent.fifaRank}` : "—";
+  const champ = !!opts.champ && result === "win";
+  const { name, badge } = stageBits(m);
+  const rank = m.opponent.fifaRank ? `FIFA #${m.opponent.fifaRank}` : "Opponent TBD";
 
   const toggle = RESULTS.map(
     (r) =>
       `<button class="toggle-btn ${r} ${result === r ? "active" : ""}" data-match="${m.id}" data-type="${m.type}" data-result="${r}"${locked ? " disabled" : ""}>${RESULT_LABEL[r]}</button>`
   ).join("");
 
-  const scoreChip = fin
-    ? `<span class="chip score-chip ${fin.result}">FT ${fin.usaGoals}–${fin.oppGoals}</span>`
-    : "";
+  const ft = fin ? `<span class="ft ${fin.result}">FT ${fin.usaGoals}–${fin.oppGoals}</span>` : "";
+  const tag = locked ? "Final · live" : m.type === "group" ? "3 pts a win" : "Win or out";
+  const nodeMark = champ ? "🏆" : "";
+
+  const cls = [
+    "station",
+    result,
+    eliminated ? "out" : "",
+    locked ? "locked" : "",
+    isKey ? "key" : "",
+    opts.terminus ? "terminus" : "",
+    champ ? "champ" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return `
-    <article class="match-card ${isKey ? "key" : ""} ${result} ${eliminated ? "dim" : ""} ${locked ? "locked" : ""}" data-id="${m.id}">
-      <div class="match-head">
-        <div class="match-stage">
-          <span class="stage-label">${m.stage}</span>
-          <span class="stage-meta">${m.date} · ${m.venue}</span>
+    <div class="${cls}" data-id="${m.id}">
+      <div class="rail"><span class="node">${nodeMark}</span></div>
+      <article class="card">
+        <div class="card-top">
+          <div><span class="stage-name">${name}</span><span class="md">${badge}</span></div>
+          <span class="when">${shortDate(m.date)} · ${cityOf(m.venue)}</span>
         </div>
-        <div class="head-chips">${scoreChip}${isKey ? `<span class="chip key-chip">⭐ KEY MATCH</span>` : ""}</div>
-      </div>
-      <div class="match-body">
-        <div class="opponent">
+        <div class="fixture">
           <span class="flag">${m.opponent.flag}</span>
-          <div class="opp-text">
-            <span class="opp-name">USA <span class="vs">vs</span> ${m.opponent.name}${m.opponent.projected ? ` <span class="proj">proj</span>` : ""}</span>
-            <span class="opp-note">${m.opponent.note}</span>
+          <div class="vs">
+            <span class="teams">USA <em>v</em> ${m.opponent.name}${m.opponent.projected ? ` <span class="proj">proj</span>` : ""}</span>
+            <span class="note">${m.opponent.note}</span>
           </div>
-          <div class="opp-rank"><span class="rank-num">${rank}</span><span class="rank-lbl">FIFA</span></div>
+          <span class="rank">${rank}</span>
         </div>
-        <div class="metrics">
-          <div class="metric"><div class="metric-top"><span>Competitiveness</span><span>${comp}</span></div>${meter(comp, "comp")}</div>
-          <div class="metric"><div class="metric-top"><span>Stakes</span><span>${stk}</span></div>${meter(stk, "stakes")}</div>
-          <div class="metric"><div class="metric-top"><span>USA win chance</span><span>${winP}%</span></div>${meter(winP, "winp")}</div>
+        <div class="readout">
+          <div class="big-prob"><span class="pct">${winP}<i>%</i></span><span class="pl">USA win chance</span></div>
+          <div class="bars">
+            ${bar("Competitiveness", comp, "comp")}
+            ${bar("Stakes", stk, "stakes")}
+          </div>
         </div>
-      </div>
-      <div class="match-foot">
-        <div class="toggle">${toggle}</div>
-        <span class="type-tag ${m.type}">${
-          locked ? "✓ Final result (live)" : m.type === "group" ? "Group · points" : "Knockout · win or out"
-        }</span>
-      </div>
-    </article>`;
+        <div class="card-foot">
+          ${ft}
+          <div class="toggle">${toggle}</div>
+          <span class="tag">${tag}</span>
+          ${isKey ? `<span class="key-tag">★ Key match</span>` : ""}
+        </div>
+      </article>
+    </div>`;
 }
 
 function renderMatches() {
@@ -1414,21 +1760,26 @@ function renderMatches() {
   const groupHtml = GROUP_MATCHES.map((m) => matchCard(m, topKeyId, false)).join("");
 
   const koMatches = PATHS[activePathKey()].matches();
+  const trackCls = activePathKey() === "win" ? "track-win" : "track-runnerup";
   const koHtml = koMatches
-    .map((m) => {
+    .map((m, i) => {
       const globalIdx = matches.findIndex((x) => x === m);
       const eliminated =
         path.knockedOutAt === "Group Stage" || (endIdx !== -1 && globalIdx > endIdx);
-      return matchCard(m, topKeyId, eliminated);
+      const last = i === koMatches.length - 1;
+      return matchCard(m, topKeyId, eliminated, {
+        terminus: last,
+        champ: last && path.isChampion,
+      });
     })
     .join("");
 
   document.getElementById("matches").innerHTML = `
-    <h3 class="section-h">Group D — <span class="real-tag">real fixtures</span></h3>
-    ${groupHtml}
+    <h3 class="section-h">The group stage <span class="real-tag">real fixtures</span></h3>
+    <div class="tl-phase group">${groupHtml}</div>
     ${renderPathBar()}
-    <h3 class="section-h">Knockout road — ${PATHS[activePathKey()].label} <span class="proj-tag">projected opponents</span></h3>
-    ${koHtml}`;
+    <h3 class="section-h">The knockouts — ${PATHS[activePathKey()].label} <span class="proj-tag">projected</span></h3>
+    <div class="tl-phase knockout ${trackCls}">${koHtml}</div>`;
 
   // Wire toggles (disabled buttons are real, finished results — ignore clicks).
   document.querySelectorAll(".toggle-btn").forEach((btn) => {
@@ -1461,37 +1812,33 @@ function renderPathBar() {
   const pWin = Math.round(usaWinProb(r32win.opponent.rating) * 100);
   const pRun = Math.round(usaWinProb(r32run.opponent.rating) * 100);
 
-  const btn = (mode, label) =>
-    `<button class="path-pick ${state.pathMode === mode ? "on" : ""}" data-mode="${mode}">${label}</button>`;
-
   const autoNote = auto
-    ? `Auto-picked from your ${g.pts} pts → <strong>${active === "win" ? "win the group" : g.finish === "out" ? "wouldn't qualify" : "finish 2nd"}</strong>.`
-    : `Manually viewing the <strong>${active === "win" ? "group-winner" : "runner-up"}</strong> road.`;
+    ? `Auto-set by your ${g.pts} pts → <b>${active === "win" ? "winning the group" : g.finish === "out" ? "out of the group" : "finishing 2nd"}</b>.`
+    : `Viewing the <b>${active === "win" ? "group-winner" : "runner-up"}</b> road.`;
 
   return `
-    <section class="pathbar">
-      <div class="pathbar-top">
-        <div class="pathbar-title">Which road? <span class="pathbar-sub">${autoNote}</span></div>
-        <div class="path-picker">
-          ${btn("auto", "Auto")}
-          ${btn("win", "Win group")}
-          ${btn("runnerup", "Finish 2nd")}
+    <div class="fork">
+      <div class="fork-rail"><span class="fork-node">⑂</span></div>
+      <div class="fork-body">
+        <div class="fork-head">The fork <span>Where Group D decides everything</span></div>
+        <div class="branches">
+          <button class="branch win ${active === "win" ? "sel" : ""} path-pick" data-mode="win">
+            <span class="br-label">Win the group</span>
+            <span class="br-dest">R32 · ${cityOf(r32win.venue)} · vs ${r32win.opponent.flag} ${r32win.opponent.name}</span>
+            <span class="br-prob good">${pWin}% win chance</span>
+          </button>
+          <button class="branch runnerup ${active === "runnerup" ? "sel" : ""} path-pick" data-mode="runnerup">
+            <span class="br-label">Finish second</span>
+            <span class="br-dest">R32 · ${cityOf(r32run.venue)} · vs ${r32run.opponent.flag} ${r32run.opponent.name}</span>
+            <span class="br-prob bad">${pRun}% win chance</span>
+          </button>
+        </div>
+        <div class="fork-foot">
+          <button class="auto-pick ${auto ? "on" : ""} path-pick" data-mode="auto">Auto</button>
+          <span class="auto-note">${autoNote}</span>
         </div>
       </div>
-      <div class="path-compare">
-        <div class="pc-card ${active === "win" ? "sel" : ""}">
-          <span class="pc-head">🥇 Win Group D</span>
-          <span class="pc-body">R32 in Santa Clara vs ${r32win.opponent.flag} ${r32win.opponent.name}</span>
-          <span class="pc-prob good">${pWin}% win chance</span>
-        </div>
-        <div class="pc-vs">the prize for topping the group →</div>
-        <div class="pc-card ${active === "runnerup" ? "sel" : ""}">
-          <span class="pc-head">🥈 Finish 2nd</span>
-          <span class="pc-body">R32 in Dallas vs ${r32run.opponent.flag} ${r32run.opponent.name}</span>
-          <span class="pc-prob bad">${pRun}% win chance</span>
-        </div>
-      </div>
-    </section>`;
+    </div>`;
 }
 
 function renderSummary() {
@@ -1499,32 +1846,34 @@ function renderSummary() {
   const el = document.getElementById("summary");
   let verdict, cls, sub;
   if (path.isChampion) {
-    verdict = "🏆 WORLD CHAMPIONS";
+    verdict = "World champions";
     cls = "champ";
-    sub = "USA wins it all — history made on home soil.";
+    sub = "USA lifts the trophy on home soil — the whole road run out.";
   } else if (path.knockedOutAt === "Group Stage") {
-    verdict = "❌ OUT IN THE GROUP";
+    verdict = "Out in the group";
     cls = "out";
-    sub = `${path.pts} pts isn't enough to advance. The dream ends early.`;
+    sub = `${path.pts} points isn't enough to advance. The run ends before the knockouts.`;
   } else if (path.knockedOutAt) {
-    verdict = `Eliminated · ${path.knockedOutAt}`;
+    verdict = `Out · ${path.knockedOutAt}`;
     cls = "out";
     sub = `A run to the ${path.knockedOutAt.toLowerCase()}, then the road ends.`;
   } else {
     verdict = "Run in progress";
     cls = "live";
-    sub = "Set every result to map the full path.";
+    sub = "Set the remaining results to map the full road to the final.";
   }
 
   const finishLbl =
-    path.finish === "win" ? "Win the group" : path.finish === "runnerup" ? "Through as 2nd/3rd" : "Eliminated";
+    path.finish === "win" ? "1st — group" : path.finish === "runnerup" ? "2nd / 3rd" : "Out";
 
   el.className = `summary ${cls}`;
   el.innerHTML = `
-    <div class="verdict"><span class="verdict-main">${verdict}</span><span class="verdict-sub">${sub}</span></div>
+    <div class="verdict-eyebrow">Projected outcome</div>
+    <div class="verdict-main">${verdict}</div>
+    <div class="verdict-sub">${sub}</div>
     <div class="summary-stats">
-      <div class="stat"><span class="stat-num">${path.pts}</span><span class="stat-lbl">Group pts</span></div>
-      <div class="stat"><span class="stat-num">${path.wins}-${path.draws}-${path.losses}</span><span class="stat-lbl">Group W-D-L</span></div>
+      <div class="stat"><span class="stat-num">${path.pts}</span><span class="stat-lbl">Group points</span></div>
+      <div class="stat"><span class="stat-num">${path.wins}–${path.draws}–${path.losses}</span><span class="stat-lbl">Group W-D-L</span></div>
       <div class="stat"><span class="stat-num">${finishLbl}</span><span class="stat-lbl">Group finish</span></div>
       <div class="stat"><span class="stat-num">${path.roundsWon}</span><span class="stat-lbl">KO rounds won</span></div>
     </div>`;
@@ -1548,35 +1897,31 @@ function renderBriefing() {
       : `<li><strong>Favored the whole way</strong> on this road — protect leads and stay disciplined.</li>`,
   ];
 
-  document.getElementById("briefing").innerHTML = `<h2>What USA needs to do</h2><ul>${items.join("")}</ul>`;
+  document.getElementById("briefing").innerHTML = `<h2>Manager's notes</h2><ul>${items.join("")}</ul>`;
 }
 
 // Live status strip + manual refresh.
 function renderLiveBar() {
   const el = document.getElementById("livebar");
   if (!el) return;
-  let dot, text, cls;
+  let text, cls;
   if (liveStatus.state === "live") {
     cls = "on";
-    dot = "🔴";
     const src = liveStatus.source ? ` · ${liveStatus.source}` : "";
-    text = `LIVE standings — updated ${timeAgo(liveStatus.at) || "now"}${src}`;
+    text = `LIVE — standings updated ${timeAgo(liveStatus.at) || "now"}${src}`;
   } else if (liveStatus.state === "loading") {
     cls = "loading";
-    dot = "⏳";
-    text = "Fetching live standings…";
+    text = "FETCHING LIVE STANDINGS…";
   } else if (liveStatus.state === "off") {
     cls = "off";
-    dot = "⚪";
-    text = "Live updates off — using built-in projection";
+    text = "LIVE OFF — using built-in projection";
   } else {
     cls = "off";
-    dot = "⚠️";
-    text = "Live feed unavailable — showing built-in projection";
+    text = "LIVE UNAVAILABLE — showing built-in projection";
   }
   el.className = `livebar ${cls}`;
   el.innerHTML = `
-    <span class="live-dot">${dot}</span>
+    <span class="live-dot"></span>
     <span class="live-text">${text}</span>
     <button id="refresh" class="live-refresh" ${liveStatus.state === "loading" ? "disabled" : ""}>↻ Refresh</button>`;
   const btn = document.getElementById("refresh");
@@ -1617,7 +1962,7 @@ function renderStandings() {
     })
     .join("");
   el.innerHTML = `
-    <h3 class="section-h">Group D — live table <span class="real-tag">live</span></h3>
+    <h3 class="section-h">The live table <span class="real-tag">live</span></h3>
     <div class="table-wrap">
       <table class="standings-table">
         <thead><tr><th>#</th><th class="team">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>

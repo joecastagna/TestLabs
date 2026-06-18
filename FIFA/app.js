@@ -246,10 +246,28 @@ function activeMatches() {
 
 /* ------------------------------- rendering ------------------------------- */
 
-const meter = (v, kind) =>
-  `<div class="meter" title="${v}/100"><div class="meter-fill ${kind}" style="width:${v}%"></div></div>`;
+// Concise stage name + short badge for the station header.
+function stageBits(m) {
+  if (m.type === "group") {
+    const md = { g1: "1", g2: "2", g3: "3" }[m.id];
+    return { name: `Matchday ${md}`, badge: "Group D" };
+  }
+  const badge = { r32: "R32", r16: "R16", qf: "QF", sf: "SF", final: "Final" }[m.id];
+  return { name: m.stage, badge };
+}
+function shortDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return isNaN(d) ? iso : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function cityOf(venue) {
+  return (venue || "").split(", ").slice(-1)[0];
+}
 
-function matchCard(m, topKeyId, eliminated) {
+const bar = (label, v, kind) =>
+  `<div class="bar"><span class="bl">${label}</span><span class="bv">${v}</span><i class="track"><b class="${kind}" style="width:${v}%"></b></i></div>`;
+
+// A single station on the route spine.
+function matchCard(m, topKeyId, eliminated, opts = {}) {
   const comp = competitiveness(m.opponent.rating);
   const stk = stakes(m);
   const winP = Math.round(usaWinProb(m.opponent.rating) * 100);
@@ -257,48 +275,62 @@ function matchCard(m, topKeyId, eliminated) {
   const fin = finishedFor(m);
   const result = fin ? fin.result : getResult(m);
   const locked = !!fin;
-  const rank = m.opponent.fifaRank ? `#${m.opponent.fifaRank}` : "—";
+  const champ = !!opts.champ && result === "win";
+  const { name, badge } = stageBits(m);
+  const rank = m.opponent.fifaRank ? `FIFA #${m.opponent.fifaRank}` : "Opponent TBD";
 
   const toggle = RESULTS.map(
     (r) =>
       `<button class="toggle-btn ${r} ${result === r ? "active" : ""}" data-match="${m.id}" data-type="${m.type}" data-result="${r}"${locked ? " disabled" : ""}>${RESULT_LABEL[r]}</button>`
   ).join("");
 
-  const scoreChip = fin
-    ? `<span class="chip score-chip ${fin.result}">FT ${fin.usaGoals}–${fin.oppGoals}</span>`
-    : "";
+  const ft = fin ? `<span class="ft ${fin.result}">FT ${fin.usaGoals}–${fin.oppGoals}</span>` : "";
+  const tag = locked ? "Final · live" : m.type === "group" ? "3 pts a win" : "Win or out";
+  const nodeMark = champ ? "🏆" : "";
+
+  const cls = [
+    "station",
+    result,
+    eliminated ? "out" : "",
+    locked ? "locked" : "",
+    isKey ? "key" : "",
+    opts.terminus ? "terminus" : "",
+    champ ? "champ" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return `
-    <article class="match-card ${isKey ? "key" : ""} ${result} ${eliminated ? "dim" : ""} ${locked ? "locked" : ""}" data-id="${m.id}">
-      <div class="match-head">
-        <div class="match-stage">
-          <span class="stage-label">${m.stage}</span>
-          <span class="stage-meta">${m.date} · ${m.venue}</span>
+    <div class="${cls}" data-id="${m.id}">
+      <div class="rail"><span class="node">${nodeMark}</span></div>
+      <article class="card">
+        <div class="card-top">
+          <div><span class="stage-name">${name}</span><span class="md">${badge}</span></div>
+          <span class="when">${shortDate(m.date)} · ${cityOf(m.venue)}</span>
         </div>
-        <div class="head-chips">${scoreChip}${isKey ? `<span class="chip key-chip">⭐ KEY MATCH</span>` : ""}</div>
-      </div>
-      <div class="match-body">
-        <div class="opponent">
+        <div class="fixture">
           <span class="flag">${m.opponent.flag}</span>
-          <div class="opp-text">
-            <span class="opp-name">USA <span class="vs">vs</span> ${m.opponent.name}${m.opponent.projected ? ` <span class="proj">proj</span>` : ""}</span>
-            <span class="opp-note">${m.opponent.note}</span>
+          <div class="vs">
+            <span class="teams">USA <em>v</em> ${m.opponent.name}${m.opponent.projected ? ` <span class="proj">proj</span>` : ""}</span>
+            <span class="note">${m.opponent.note}</span>
           </div>
-          <div class="opp-rank"><span class="rank-num">${rank}</span><span class="rank-lbl">FIFA</span></div>
+          <span class="rank">${rank}</span>
         </div>
-        <div class="metrics">
-          <div class="metric"><div class="metric-top"><span>Competitiveness</span><span>${comp}</span></div>${meter(comp, "comp")}</div>
-          <div class="metric"><div class="metric-top"><span>Stakes</span><span>${stk}</span></div>${meter(stk, "stakes")}</div>
-          <div class="metric"><div class="metric-top"><span>USA win chance</span><span>${winP}%</span></div>${meter(winP, "winp")}</div>
+        <div class="readout">
+          <div class="big-prob"><span class="pct">${winP}<i>%</i></span><span class="pl">USA win chance</span></div>
+          <div class="bars">
+            ${bar("Competitiveness", comp, "comp")}
+            ${bar("Stakes", stk, "stakes")}
+          </div>
         </div>
-      </div>
-      <div class="match-foot">
-        <div class="toggle">${toggle}</div>
-        <span class="type-tag ${m.type}">${
-          locked ? "✓ Final result (live)" : m.type === "group" ? "Group · points" : "Knockout · win or out"
-        }</span>
-      </div>
-    </article>`;
+        <div class="card-foot">
+          ${ft}
+          <div class="toggle">${toggle}</div>
+          <span class="tag">${tag}</span>
+          ${isKey ? `<span class="key-tag">★ Key match</span>` : ""}
+        </div>
+      </article>
+    </div>`;
 }
 
 function renderMatches() {
@@ -324,21 +356,26 @@ function renderMatches() {
   const groupHtml = GROUP_MATCHES.map((m) => matchCard(m, topKeyId, false)).join("");
 
   const koMatches = PATHS[activePathKey()].matches();
+  const trackCls = activePathKey() === "win" ? "track-win" : "track-runnerup";
   const koHtml = koMatches
-    .map((m) => {
+    .map((m, i) => {
       const globalIdx = matches.findIndex((x) => x === m);
       const eliminated =
         path.knockedOutAt === "Group Stage" || (endIdx !== -1 && globalIdx > endIdx);
-      return matchCard(m, topKeyId, eliminated);
+      const last = i === koMatches.length - 1;
+      return matchCard(m, topKeyId, eliminated, {
+        terminus: last,
+        champ: last && path.isChampion,
+      });
     })
     .join("");
 
   document.getElementById("matches").innerHTML = `
-    <h3 class="section-h">Group D — <span class="real-tag">real fixtures</span></h3>
-    ${groupHtml}
+    <h3 class="section-h">The group stage <span class="real-tag">real fixtures</span></h3>
+    <div class="tl-phase group">${groupHtml}</div>
     ${renderPathBar()}
-    <h3 class="section-h">Knockout road — ${PATHS[activePathKey()].label} <span class="proj-tag">projected opponents</span></h3>
-    ${koHtml}`;
+    <h3 class="section-h">The knockouts — ${PATHS[activePathKey()].label} <span class="proj-tag">projected</span></h3>
+    <div class="tl-phase knockout ${trackCls}">${koHtml}</div>`;
 
   // Wire toggles (disabled buttons are real, finished results — ignore clicks).
   document.querySelectorAll(".toggle-btn").forEach((btn) => {
@@ -371,37 +408,33 @@ function renderPathBar() {
   const pWin = Math.round(usaWinProb(r32win.opponent.rating) * 100);
   const pRun = Math.round(usaWinProb(r32run.opponent.rating) * 100);
 
-  const btn = (mode, label) =>
-    `<button class="path-pick ${state.pathMode === mode ? "on" : ""}" data-mode="${mode}">${label}</button>`;
-
   const autoNote = auto
-    ? `Auto-picked from your ${g.pts} pts → <strong>${active === "win" ? "win the group" : g.finish === "out" ? "wouldn't qualify" : "finish 2nd"}</strong>.`
-    : `Manually viewing the <strong>${active === "win" ? "group-winner" : "runner-up"}</strong> road.`;
+    ? `Auto-set by your ${g.pts} pts → <b>${active === "win" ? "winning the group" : g.finish === "out" ? "out of the group" : "finishing 2nd"}</b>.`
+    : `Viewing the <b>${active === "win" ? "group-winner" : "runner-up"}</b> road.`;
 
   return `
-    <section class="pathbar">
-      <div class="pathbar-top">
-        <div class="pathbar-title">Which road? <span class="pathbar-sub">${autoNote}</span></div>
-        <div class="path-picker">
-          ${btn("auto", "Auto")}
-          ${btn("win", "Win group")}
-          ${btn("runnerup", "Finish 2nd")}
+    <div class="fork">
+      <div class="fork-rail"><span class="fork-node">⑂</span></div>
+      <div class="fork-body">
+        <div class="fork-head">The fork <span>Where Group D decides everything</span></div>
+        <div class="branches">
+          <button class="branch win ${active === "win" ? "sel" : ""} path-pick" data-mode="win">
+            <span class="br-label">Win the group</span>
+            <span class="br-dest">R32 · ${cityOf(r32win.venue)} · vs ${r32win.opponent.flag} ${r32win.opponent.name}</span>
+            <span class="br-prob good">${pWin}% win chance</span>
+          </button>
+          <button class="branch runnerup ${active === "runnerup" ? "sel" : ""} path-pick" data-mode="runnerup">
+            <span class="br-label">Finish second</span>
+            <span class="br-dest">R32 · ${cityOf(r32run.venue)} · vs ${r32run.opponent.flag} ${r32run.opponent.name}</span>
+            <span class="br-prob bad">${pRun}% win chance</span>
+          </button>
+        </div>
+        <div class="fork-foot">
+          <button class="auto-pick ${auto ? "on" : ""} path-pick" data-mode="auto">Auto</button>
+          <span class="auto-note">${autoNote}</span>
         </div>
       </div>
-      <div class="path-compare">
-        <div class="pc-card ${active === "win" ? "sel" : ""}">
-          <span class="pc-head">🥇 Win Group D</span>
-          <span class="pc-body">R32 in Santa Clara vs ${r32win.opponent.flag} ${r32win.opponent.name}</span>
-          <span class="pc-prob good">${pWin}% win chance</span>
-        </div>
-        <div class="pc-vs">the prize for topping the group →</div>
-        <div class="pc-card ${active === "runnerup" ? "sel" : ""}">
-          <span class="pc-head">🥈 Finish 2nd</span>
-          <span class="pc-body">R32 in Dallas vs ${r32run.opponent.flag} ${r32run.opponent.name}</span>
-          <span class="pc-prob bad">${pRun}% win chance</span>
-        </div>
-      </div>
-    </section>`;
+    </div>`;
 }
 
 function renderSummary() {
@@ -409,32 +442,34 @@ function renderSummary() {
   const el = document.getElementById("summary");
   let verdict, cls, sub;
   if (path.isChampion) {
-    verdict = "🏆 WORLD CHAMPIONS";
+    verdict = "World champions";
     cls = "champ";
-    sub = "USA wins it all — history made on home soil.";
+    sub = "USA lifts the trophy on home soil — the whole road run out.";
   } else if (path.knockedOutAt === "Group Stage") {
-    verdict = "❌ OUT IN THE GROUP";
+    verdict = "Out in the group";
     cls = "out";
-    sub = `${path.pts} pts isn't enough to advance. The dream ends early.`;
+    sub = `${path.pts} points isn't enough to advance. The run ends before the knockouts.`;
   } else if (path.knockedOutAt) {
-    verdict = `Eliminated · ${path.knockedOutAt}`;
+    verdict = `Out · ${path.knockedOutAt}`;
     cls = "out";
     sub = `A run to the ${path.knockedOutAt.toLowerCase()}, then the road ends.`;
   } else {
     verdict = "Run in progress";
     cls = "live";
-    sub = "Set every result to map the full path.";
+    sub = "Set the remaining results to map the full road to the final.";
   }
 
   const finishLbl =
-    path.finish === "win" ? "Win the group" : path.finish === "runnerup" ? "Through as 2nd/3rd" : "Eliminated";
+    path.finish === "win" ? "1st — group" : path.finish === "runnerup" ? "2nd / 3rd" : "Out";
 
   el.className = `summary ${cls}`;
   el.innerHTML = `
-    <div class="verdict"><span class="verdict-main">${verdict}</span><span class="verdict-sub">${sub}</span></div>
+    <div class="verdict-eyebrow">Projected outcome</div>
+    <div class="verdict-main">${verdict}</div>
+    <div class="verdict-sub">${sub}</div>
     <div class="summary-stats">
-      <div class="stat"><span class="stat-num">${path.pts}</span><span class="stat-lbl">Group pts</span></div>
-      <div class="stat"><span class="stat-num">${path.wins}-${path.draws}-${path.losses}</span><span class="stat-lbl">Group W-D-L</span></div>
+      <div class="stat"><span class="stat-num">${path.pts}</span><span class="stat-lbl">Group points</span></div>
+      <div class="stat"><span class="stat-num">${path.wins}–${path.draws}–${path.losses}</span><span class="stat-lbl">Group W-D-L</span></div>
       <div class="stat"><span class="stat-num">${finishLbl}</span><span class="stat-lbl">Group finish</span></div>
       <div class="stat"><span class="stat-num">${path.roundsWon}</span><span class="stat-lbl">KO rounds won</span></div>
     </div>`;
@@ -458,35 +493,31 @@ function renderBriefing() {
       : `<li><strong>Favored the whole way</strong> on this road — protect leads and stay disciplined.</li>`,
   ];
 
-  document.getElementById("briefing").innerHTML = `<h2>What USA needs to do</h2><ul>${items.join("")}</ul>`;
+  document.getElementById("briefing").innerHTML = `<h2>Manager's notes</h2><ul>${items.join("")}</ul>`;
 }
 
 // Live status strip + manual refresh.
 function renderLiveBar() {
   const el = document.getElementById("livebar");
   if (!el) return;
-  let dot, text, cls;
+  let text, cls;
   if (liveStatus.state === "live") {
     cls = "on";
-    dot = "🔴";
     const src = liveStatus.source ? ` · ${liveStatus.source}` : "";
-    text = `LIVE standings — updated ${timeAgo(liveStatus.at) || "now"}${src}`;
+    text = `LIVE — standings updated ${timeAgo(liveStatus.at) || "now"}${src}`;
   } else if (liveStatus.state === "loading") {
     cls = "loading";
-    dot = "⏳";
-    text = "Fetching live standings…";
+    text = "FETCHING LIVE STANDINGS…";
   } else if (liveStatus.state === "off") {
     cls = "off";
-    dot = "⚪";
-    text = "Live updates off — using built-in projection";
+    text = "LIVE OFF — using built-in projection";
   } else {
     cls = "off";
-    dot = "⚠️";
-    text = "Live feed unavailable — showing built-in projection";
+    text = "LIVE UNAVAILABLE — showing built-in projection";
   }
   el.className = `livebar ${cls}`;
   el.innerHTML = `
-    <span class="live-dot">${dot}</span>
+    <span class="live-dot"></span>
     <span class="live-text">${text}</span>
     <button id="refresh" class="live-refresh" ${liveStatus.state === "loading" ? "disabled" : ""}>↻ Refresh</button>`;
   const btn = document.getElementById("refresh");
@@ -527,7 +558,7 @@ function renderStandings() {
     })
     .join("");
   el.innerHTML = `
-    <h3 class="section-h">Group D — live table <span class="real-tag">live</span></h3>
+    <h3 class="section-h">The live table <span class="real-tag">live</span></h3>
     <div class="table-wrap">
       <table class="standings-table">
         <thead><tr><th>#</th><th class="team">Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>

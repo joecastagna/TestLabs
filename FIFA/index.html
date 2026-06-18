@@ -3,24 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>USA Path to Glory · 2026 World Cup Simulator</title>
+    <title>Path to Glory · USA at the 2026 World Cup</title>
+    <meta
+      name="description"
+      content="Live Group D standings and an interactive map of the USA's road through the 2026 World Cup — the knockout draw forks at the group finish."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="hero">
       <div class="hero-inner">
-        <div class="badge">🇺🇸 USMNT · FIFA World Cup 2026</div>
-        <h1>Path to Glory</h1>
-        <p class="tagline">
-          <strong>Live</strong> Group D standings, auto-updated as results come
-          in. Finished games lock to their real scores; toggle the rest and watch
-          two knockout roads diverge — <strong>winning the group</strong> vs
-          finishing 2nd — with the key and most competitive matches flagged.
+        <div class="eyebrow reveal">🇺🇸 United States · FIFA World Cup 26 · Group D</div>
+        <h1 class="reveal d1">Path to<br /><span class="glow">Glory</span></h1>
+        <p class="tagline reveal d2">
+          One map of the USA's whole tournament. Win Group D for the soft side of
+          the draw — finish second and run straight into the wolves. <b>Live
+          standings</b>, your scenario, every result reshaping the road.
         </p>
-        <div class="controls">
+        <div class="controls reveal d3">
+          <button id="reset" class="ctrl">Dream run ★</button>
           <button id="realistic" class="ctrl ghost">Realistic run</button>
-          <button id="reset" class="ctrl">Win it all ✨</button>
-          <button id="share" class="ctrl ghost">🔗 Share scenario</button>
+          <button id="share" class="ctrl ghost">Copy link</button>
         </div>
       </div>
     </header>
@@ -32,28 +41,21 @@
 
       <section id="standings" class="standings"></section>
 
-      <section id="briefing" class="briefing"></section>
-
-      <div class="legend">
-        <span><i class="dot comp"></i> Competitiveness — how close on paper</span>
-        <span><i class="dot stakes"></i> Stakes — how much is riding on it</span>
-        <span><i class="dot winp"></i> USA win chance</span>
-        <span class="legend-key">⭐ = the single most decisive match</span>
-      </div>
-
       <section id="matches" class="matches"></section>
+
+      <section id="briefing" class="briefing"></section>
     </main>
 
     <footer class="foot">
       <p>
-        Built for fun ·
+        Built for the love of the game ·
         <a
           href="https://code.claude.com/docs/en/claude-code-on-the-web"
           target="_blank"
           rel="noopener"
-          >ratings &amp; opponents are a projection — edit
-          <code>data.js</code> to match the real draw</a
-        >.
+          >live data refreshes automatically</a
+        >
+        · knockout opponents past the Round of 32 are projections
       </p>
     </footer>
 
