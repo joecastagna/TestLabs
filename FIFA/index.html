@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>USA Path to Glory · 2026 World Cup Simulator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="badge">🇺🇸 USMNT · FIFA World Cup 2026</div>
+        <h1>Path to Glory</h1>
+        <p class="tagline">
+          Real Group D draw. Toggle every result and watch two knockout roads
+          diverge — <strong>winning the group</strong> vs finishing 2nd — with
+          the <strong>key</strong> and most <strong>competitive</strong> matches
+          flagged live.
+        </p>
+        <div class="controls">
+          <button id="realistic" class="ctrl ghost">Realistic run</button>
+          <button id="reset" class="ctrl">Win it all ✨</button>
+          <button id="share" class="ctrl ghost">🔗 Share scenario</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="summary" class="summary" aria-live="polite"></section>
+
+      <section id="briefing" class="briefing"></section>
+
+      <div class="legend">
+        <span><i class="dot comp"></i> Competitiveness — how close on paper</span>
+        <span><i class="dot stakes"></i> Stakes — how much is riding on it</span>
+        <span><i class="dot winp"></i> USA win chance</span>
+        <span class="legend-key">⭐ = the single most decisive match</span>
+      </div>
+
+      <section id="matches" class="matches"></section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        Built for fun ·
+        <a
+          href="https://code.claude.com/docs/en/claude-code-on-the-web"
+          target="_blank"
+          rel="noopener"
+          >ratings &amp; opponents are a projection — edit
+          <code>data.js</code> to match the real draw</a
+        >.
+      </p>
+    </footer>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
