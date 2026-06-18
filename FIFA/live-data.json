@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-06-13T07:00:00Z",
+  "source": "seed",
+  "season": "2026",
+  "usaRating": 1659,
+  "group": {
+    "name": "Group D",
+    "standings": [
+      { "team": "United States", "code": "USA", "played": 1, "win": 1, "draw": 0, "loss": 0, "gf": 4, "ga": 1, "gd": 3, "points": 3 },
+      { "team": "Australia", "code": "AUS", "played": 0, "win": 0, "draw": 0, "loss": 0, "gf": 0, "ga": 0, "gd": 0, "points": 0 },
+      { "team": "Türkiye", "code": "TUR", "played": 0, "win": 0, "draw": 0, "loss": 0, "gf": 0, "ga": 0, "gd": 0, "points": 0 },
+      { "team": "Paraguay", "code": "PAR", "played": 1, "win": 0, "draw": 0, "loss": 1, "gf": 1, "ga": 4, "gd": -3, "points": 0 }
+    ],
+    "usaMatches": [
+      { "id": "g1", "opponentCode": "PAR", "status": "finished", "usaGoals": 4, "oppGoals": 1, "result": "win" },
+      { "id": "g2", "opponentCode": "AUS", "status": "scheduled" },
+      { "id": "g3", "opponentCode": "TUR", "status": "scheduled" }
+    ]
+  }
+}

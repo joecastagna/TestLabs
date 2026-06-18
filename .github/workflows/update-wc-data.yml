@@ -1,0 +1,45 @@
+name: Update World Cup live data
+
+# Keeps FIFA/live-data.json fresh with current Group D standings.
+# Runs on a schedule during the tournament and can be triggered manually.
+on:
+  schedule:
+    - cron: "*/30 * * * *" # every 30 minutes
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-wc-data
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch latest standings
+        env:
+          # Optional: add a free token at github repo Settings → Secrets → Actions
+          # for higher-quality data. Falls back to a no-key source if unset.
+          FOOTBALL_DATA_TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+          SEASON: "2026"
+        run: node FIFA/scripts/update-live-data.mjs
+
+      - name: Commit if changed
+        run: |
+          if [[ -n "$(git status --porcelain FIFA/live-data.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add FIFA/live-data.json
+            git commit -m "chore: refresh World Cup live data"
+            git push
+          else
+            echo "No standings change."
+          fi

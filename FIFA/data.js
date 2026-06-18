@@ -239,12 +239,25 @@ const PATH_RUNNER_UP = [
   },
 ];
 
+// ---- Live data ---------------------------------------------------------------
+// The app fetches this JSON on load (and on Refresh) to overlay REAL current
+// Group D standings and finished results on top of the bundled defaults above.
+// It is kept fresh by a scheduled GitHub Action (.github/workflows/update-wc-data.yml).
+// We read it from raw.githubusercontent (CORS-enabled, ~minutes-fresh) with a
+// cache-buster so any device always sees the latest committed snapshot. If the
+// fetch fails, the app silently falls back to the bundled projection.
+const LIVE_CONFIG = {
+  enabled: true,
+  url: "https://raw.githubusercontent.com/joecastagna/TestLabs/main/FIFA/live-data.json",
+};
+
 // Expose to app.js (plain-script load).
 if (typeof window !== "undefined") {
   window.USA_RATING = USA_RATING;
   window.GROUP_MATCHES = GROUP_MATCHES;
   window.PATH_WIN_GROUP = PATH_WIN_GROUP;
   window.PATH_RUNNER_UP = PATH_RUNNER_UP;
+  window.LIVE_CONFIG = LIVE_CONFIG;
   // Backwards-compatible default path used before a group finish is known.
   window.MATCHES = GROUP_MATCHES.concat(PATH_WIN_GROUP);
 }

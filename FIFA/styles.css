@@ -577,6 +577,168 @@ main {
   transform: translateX(-50%) translateY(0);
 }
 
+/* -------------------------------- live bar ------------------------------- */
+.livebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  padding: 10px 14px 10px 16px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+  border-left: 6px solid var(--muted);
+}
+.livebar.on {
+  border-left-color: var(--red);
+}
+.livebar.loading {
+  border-left-color: var(--winp);
+}
+.livebar.off {
+  border-left-color: var(--stakes);
+}
+.live-dot {
+  font-size: 13px;
+}
+.livebar.on .live-dot {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.live-text {
+  flex: 1;
+}
+.live-refresh {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  transition: background 0.12s;
+}
+.live-refresh:hover {
+  background: #e9eef8;
+}
+.live-refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ----------------------------- standings table --------------------------- */
+.standings {
+  margin-top: 18px;
+}
+.table-wrap {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.standings-table th,
+.standings-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.standings-table th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--bg);
+}
+.standings-table td.team,
+.standings-table th.team {
+  text-align: left;
+  font-weight: 600;
+}
+.standings-table td.pos {
+  color: var(--muted);
+}
+.standings-table td.pts {
+  font-weight: 800;
+  color: var(--navy);
+}
+.standings-table tr.usa {
+  background: rgba(47, 111, 237, 0.08);
+}
+.standings-table tr.q td.pos {
+  box-shadow: inset 3px 0 0 var(--comp);
+}
+.standings-table tr.q3 td.pos {
+  box-shadow: inset 3px 0 0 var(--stakes);
+}
+.standings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.table-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 2px 0;
+}
+.table-key .k {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.table-key .k.q {
+  background: var(--comp);
+  margin-right: 2px;
+}
+.table-key .k.q3 {
+  background: var(--stakes);
+  margin: 0 2px 0 10px;
+}
+
+/* ---------------------------- score chip / locked ------------------------ */
+.head-chips {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.score-chip {
+  background: var(--navy);
+  color: #fff;
+}
+.score-chip.win {
+  background: var(--comp);
+}
+.score-chip.draw {
+  background: var(--stakes);
+}
+.score-chip.loss {
+  background: var(--red);
+}
+.match-card.locked .toggle {
+  opacity: 0.85;
+}
+.toggle-btn:disabled {
+  cursor: default;
+}
+.match-card.locked .toggle-btn:not(.active) {
+  opacity: 0.35;
+}
+
 @media (max-width: 680px) {
   .match-body {
     grid-template-columns: 1fr;
@@ -591,5 +753,12 @@ main {
   }
   .pc-vs {
     max-width: none;
+  }
+  .standings-table {
+    font-size: 12.5px;
+  }
+  .standings-table th,
+  .standings-table td {
+    padding: 8px 5px;
   }
 }
