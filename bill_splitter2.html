@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bill Splitter — Toast Coffee + Kitchen</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0efed; color: #1a1a1a; min-height: 100vh; display: flex; justify-content: center; padding: 1.5rem 1rem 3rem; }
+    .card { background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.1); padding: 1.5rem; max-width: 480px; width: 100%; height: fit-content; }
+    .venue-name { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+    .venue-sub { font-size: 13px; color: #888; margin-bottom: 1.25rem; }
+    .section-title { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .item-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.07); }
+    .item-row:last-child { border-bottom: none; }
+    .item-check { width: 22px; height: 22px; cursor: pointer; accent-color: #1D9E75; flex-shrink: 0; }
+    .item-name { flex: 1; font-size: 15px; color: #1a1a1a; }
+    .item-price { font-size: 15px; color: #555; min-width: 52px; text-align: right; }
+    .summary-card { background: #f0efed; border-radius: 12px; padding: 1rem 1.25rem; margin-top: 1.25rem; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; color: #555; }
+    .summary-row span:last-child { color: #1a1a1a; font-weight: 500; }
+    .summary-total { display: flex; justify-content: space-between; font-size: 22px; font-weight: 600; padding-top: 12px; margin-top: 8px; border-top: 1px solid rgba(0,0,0,0.12); color: #1a1a1a; }
+    .none-msg { font-size: 14px; color: #bbb; text-align: center; padding: 1rem 0; }
+    .footer-note { font-size: 12px; color: #bbb; text-align: center; margin-top: 0.75rem; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <p class="venue-name">Toast Coffee + Kitchen</p>
+    <p class="venue-sub">Long Beach, NY — Table 56 · 5 guests · 6/20/26</p>
+
+    <p class="section-title">Select what you had</p>
+
+    <div id="items-list">
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="5.00"><span class="item-name">JB Sand Dollars IPA</span><span class="item-price">$5.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="5.00"><span class="item-name">JB Sand Dollars IPA</span><span class="item-price">$5.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="10.00"><span class="item-name">Coastal Coconut Daquiri</span><span class="item-price">$10.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="10.00"><span class="item-name">Espresso Martini</span><span class="item-price">$10.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="10.00"><span class="item-name">Polar Bear Paloma</span><span class="item-price">$10.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="10.00"><span class="item-name">Polar Bear Paloma</span><span class="item-price">$10.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="5.00"><span class="item-name">Blue Point Toasted</span><span class="item-price">$5.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="14.00"><span class="item-name">Zucchini Fries</span><span class="item-price">$14.00</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="16.50"><span class="item-name">Summer Grain Bowl</span><span class="item-price">$16.50</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="5.95"><span class="item-name">Grilled Chicken (add-on)</span><span class="item-price">$5.95</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="4.95"><span class="item-name">Side of French Fries</span><span class="item-price">$4.95</span></div>
+      <div class="item-row"><input class="item-check" type="checkbox" data-price="18.95"><span class="item-name">Sunday Chicken Bites</span><span class="item-price">$18.95</span></div>
+    </div>
+
+    <div class="summary-card">
+      <div id="summary-empty" class="none-msg">Select items above to see your total</div>
+      <div id="summary-content" class="hidden">
+        <div class="summary-row"><span>Your items</span><span id="s-subtotal">$0.00</span></div>
+        <div class="summary-row"><span>Your share of tax (8.62%)</span><span id="s-tax">$0.00</span></div>
+        <div class="summary-row"><span>Tip (20%)</span><span id="s-tip">$0.00</span></div>
+        <div class="summary-total"><span>You owe</span><span id="s-total">$0.00</span></div>
+      </div>
+    </div>
+
+    <p class="footer-note">Tax and tip calculated on your items only. Card surcharge (3%) not included.</p>
+  </div>
+
+  <script>
+    var TAX_RATE = 9.95 / 115.35;
+    var TIP_RATE = 0.20;
+
+    var checkboxes = document.querySelectorAll('.item-check');
+    for (var i = 0; i < checkboxes.length; i++) {
+      checkboxes[i].addEventListener('change', update);
+    }
+
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = '';
+        el.appendChild(document.createTextNode(value));
+      }
+    }
+
+    function update() {
+      var checked = document.querySelectorAll('.item-check:checked');
+      var subtotal = 0;
+      for (var i = 0; i < checked.length; i++) {
+        subtotal += parseFloat(checked[i].getAttribute('data-price'));
+      }
+
+      var emptyEl = document.getElementById('summary-empty');
+      var contentEl = document.getElementById('summary-content');
+
+      if (subtotal === 0) {
+        emptyEl.className = 'none-msg';
+        contentEl.className = 'hidden';
+        return;
+      }
+
+      emptyEl.className = 'hidden';
+      contentEl.className = '';
+
+      var tax = subtotal * TAX_RATE;
+      var tip = subtotal * TIP_RATE;
+      var total = subtotal + tax + tip;
+
+      setText('s-subtotal', '$' + subtotal.toFixed(2));
+      setText('s-tax', '$' + tax.toFixed(2));
+      setText('s-tip', '$' + tip.toFixed(2));
+      setText('s-total', '$' + total.toFixed(2));
+    }
+  </script>
+</body>
+</html>
