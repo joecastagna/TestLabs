@@ -1,0 +1,20 @@
+services:
+  backend:
+    image: localhost/catsnap-backend:prod
+    build:
+      context: ../../backend
+      dockerfile: ../ci/prod/Dockerfile.backend
+    ports:
+      - "0.0.0.0:8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    image: localhost/catsnap-frontend:prod
+    build:
+      context: ../../frontend
+      dockerfile: ../ci/prod/Dockerfile.frontend
+    ports:
+      - "0.0.0.0:80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

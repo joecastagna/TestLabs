@@ -1,0 +1,90 @@
+services:
+  backend:
+    image: localhost/catsnap-backend:dev
+    build:
+      context: ../../backend
+      dockerfile: ../ci/dev/Dockerfile.backend
+    ports:
+      - "0.0.0.0:8080:8080"
+    volumes:
+      - ../../backend:/app
+      - maven-cache:/root/.m2
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    depends_on:
+      yugabytedb:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      classifier:
+        condition: service_healthy
+
+  frontend:
+    image: localhost/catsnap-frontend:dev
+    build:
+      context: ../../frontend
+      dockerfile: ../ci/dev/Dockerfile.frontend
+    ports:
+      - "0.0.0.0:5173:5173"
+    volumes:
+      - ../../frontend:/app
+      - frontend-modules:/app/node_modules
+    depends_on:
+      - backend
+
+  yugabytedb:
+    image: docker.io/yugabytedb/yugabyte:latest
+    command: bin/yugabyted start --daemon=false --base_dir=/home/yugabyte/yb_data --listen=0.0.0.0 --tserver_flags=pgsql_proxy_bind_address=0.0.0.0:5433
+    ports:
+      - "0.0.0.0:5433:5433"
+    volumes:
+      - yugabyte-data:/home/yugabyte/yb_data
+    healthcheck:
+      test: ["CMD-SHELL", "ysqlsh -h localhost -U yugabyte -c 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev --import-realm
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HEALTH_ENABLED=true
+    volumes:
+      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json
+    ports:
+      - "0.0.0.0:8180:8080"
+      - "0.0.0.0:9000:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && echo -e 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '\"status\": \"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  classifier:
+    image: localhost/catsnap-classifier:dev
+    build:
+      context: ../../services/classifier
+    ports:
+      - "0.0.0.0:8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  mailhog:
+    image: docker.io/mailhog/mailhog:latest
+    ports:
+      - "0.0.0.0:1025:1025"
+      - "0.0.0.0:8025:8025"
+
+volumes:
+  maven-cache:
+  frontend-modules:
+  yugabyte-data:
