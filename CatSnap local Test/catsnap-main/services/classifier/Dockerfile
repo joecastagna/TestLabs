@@ -8,8 +8,8 @@ RUN apt-get update \
 
 # Install CPU-only PyTorch before other requirements so pip doesn't pull GPU wheels
 RUN pip install --no-cache-dir \
-    torch==2.3.1+cpu \
-    torchvision==0.18.1+cpu \
+    torch==2.3.1 \
+    torchvision==0.18.1 \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .
