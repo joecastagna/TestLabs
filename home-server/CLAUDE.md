@@ -78,10 +78,17 @@ Runs on the Ubuntu server (`~/apps/pihole`), added July 2026 so LAN hostnames
   `pihole -a -addcustomdns` CLI (removed in v6). Editing `pihole.toml` directly while FTL
   is running is discouraged; use the API or the admin UI (Settings → Local DNS Records).
 
-**Still needed — a manual step only you can do**: point the router's DHCP-assigned DNS
-server at `192.168.0.186` (usually Router admin → LAN/DHCP settings → DNS Server field).
-Until that's done, devices need to be manually configured to use `192.168.0.186` as their
-DNS server, or continue relying on per-device `/etc/hosts` entries.
+**Router DHCP is pointed at it (done July 2026)**: TP-Link router (Advanced → Network →
+DHCP Server) has Primary DNS `192.168.0.186`, Secondary DNS `1.1.1.1` (Cloudflare
+fallback — if the Ubuntu server is down, devices still get normal internet DNS, just not
+`.home` names or ad-blocking until it's back). Devices pick this up on their next DHCP
+lease renewal (up to ~2 hours), or immediately if you toggle Wi-Fi off/on.
+
+Current local DNS records (`dns.hosts`): `dashboard.home`, `ha.home`, `npm.home`,
+`portainer.home`, `pihole.home` — all mirrored with their real IP:port in
+[`docs/startup-guide.md`](docs/startup-guide.md) and on the dashboard's "Local DNS" panel.
+Always keep both forms documented side by side: the `.home` name is convenient but
+depends on Pi-hole being up; the IP:port always works.
 
 ## Known issues (see startup-guide.md for details)
 

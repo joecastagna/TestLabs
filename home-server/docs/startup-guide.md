@@ -2,16 +2,24 @@
 
 ## Quick Access
 
-| Resource | URL / Command |
+| Resource | Local name | Direct IP:port |
+|---|---|---|
+| **Home Dashboard** | http://dashboard.home | http://192.168.0.186:3000 |
+| **Home Assistant** | https://ha.home:8123 | https://192.168.0.121:8123 |
+| **HA (DuckDNS, remote)** | — | https://joecastagna-ha.duckdns.org:8123 |
+| **Portainer** | http://portainer.home | http://192.168.0.186:9000 |
+| **Nginx Proxy Manager** | http://npm.home | http://192.168.0.186:81 |
+| **Pi-hole Admin** | http://pihole.home:8080/admin/ | http://192.168.0.186:8080/admin/ |
+
+| SSH | Command |
 |---|---|
-| **Home Dashboard** | http://dashboard.home |
-| **Home Assistant** | https://192.168.0.121:8123 |
-| **HA (DuckDNS)** | https://joecastagna-ha.duckdns.org:8123 |
-| **Portainer** | http://192.168.0.186:9000 |
-| **Nginx Proxy Manager** | http://192.168.0.186:81 |
-| **SSH - HA Server** | `ssh root@192.168.0.121` |
-| **SSH - Ubuntu Server** | `ssh joecastagna@192.168.0.186` |
-| **SSH - iMac** | `ssh joecastagna@192.168.0.89` |
+| **HA Server** | `ssh root@192.168.0.121` |
+| **Ubuntu Server** | `ssh joecastagna@192.168.0.186` |
+| **iMac** | `ssh joecastagna@192.168.0.89` |
+
+The `.home` names only resolve once a device has picked up Pi-hole as its DNS server (see
+"Local DNS (Pi-hole)" below) — the IP:port column always works regardless, so keep both
+handy rather than relying on the name alone.
 
 ## Network Map
 
@@ -20,8 +28,11 @@ MacBook (you) ── LAN ── iMac (192.168.0.89, UTM host)
                            ├── Ubuntu VM (192.168.0.186) ── Docker
                            │     ├── home-dashboard (port 3000, proxied via NPM on :80)
                            │     ├── nginx-proxy-manager (ports 80/81/443)
-                           │     └── portainer (port 9000)
+                           │     ├── portainer (port 9000)
+                           │     └── pihole (DNS :53, admin UI :8080)
                            └── HA OS VM (192.168.0.121:8123) ── Home Assistant
+
+Router DHCP → Pi-hole (192.168.0.186) as primary DNS, 1.1.1.1 as fallback
 ```
 
 ## SSH Keys & Auth
@@ -53,7 +64,9 @@ Note: From inside the HA SSH add-on, use `172.30.32.1:8123` (internal supervisor
 - **hass-cli**: `hass-cli state list` (aliased with `--insecure` for self-signed cert)
 - **Env vars in `~/.zshrc`**: `HASS_SERVER`, `HASS_TOKEN`
 - **Claude skill**: `~/.claude/skills/home-assistant-manager/` (HA expertise skill)
-- **`/etc/hosts`**: `192.168.0.186 dashboard.home`
+- **`/etc/hosts`**: `192.168.0.186 dashboard.home` — legacy, superseded by Pi-hole (see
+  "Local DNS (Pi-hole)" below), which now resolves `dashboard.home` network-wide. Harmless
+  to leave in place; safe to remove.
 
 ### On HA SSH Add-on (Alpine, does NOT persist across add-on restarts)
 
@@ -155,13 +168,13 @@ D-pad, volume, and app launching. Both are needed — not duplicates.
 
 ## Home Dashboard (Dynamic)
 
-- **URL**: http://dashboard.home (proxied) or http://192.168.0.186:3000 (direct)
+- **URL**: http://dashboard.home or http://192.168.0.186:3000 (direct)
 - **Container**: `home-dashboard` on Ubuntu server
 - **Source**: mirrored in [`../dashboard/`](../dashboard/)
-- **Features**: Live ping checks, HA HTTP check, Docker container status, 15-second auto-refresh, dark mode
+- **Features**: Live ping checks, HA HTTP check, Docker container status, 15-second auto-refresh, dark mode, local DNS reference panel
 - **Docker socket**: mounted read-only for container status
 - **Network mode**: host (for LAN ping access)
-- **NPM proxy**: `dashboard.home` → `192.168.0.186:3000`
+- **NPM proxy**: `dashboard.home` → `192.168.0.186:3000` (only reachable once a device is using Pi-hole for DNS)
 
 ### Rebuild/restart dashboard
 
@@ -170,6 +183,29 @@ ssh joecastagna@192.168.0.186
 cd ~/apps/home-dashboard
 docker compose up -d --build
 ```
+
+## Local DNS (Pi-hole)
+
+Added July 2026 so LAN hostnames resolve on every device on the network, not just via a
+manual `/etc/hosts` entry on one Mac. Runs on the Ubuntu server, source in
+[`../pihole/`](../pihole/).
+
+- **Admin UI**: https://pihole.home:8080/admin/ or http://192.168.0.186:8080/admin/ (password in `secrets.local.md`)
+- **Router DHCP**: TP-Link Archer BE230, Advanced → Network → DHCP Server — Primary DNS `192.168.0.186`, Secondary DNS `1.1.1.1` (Cloudflare fallback, so the whole LAN keeps internet access even if the Ubuntu server is down; `.home` names and ad-blocking just pause until it's back up)
+- Devices pick up the new DNS server on their next DHCP lease renewal (~2 hr) or immediately after toggling Wi-Fi off/on
+
+| Hostname | Resolves to |
+|---|---|
+| `dashboard.home` | http://192.168.0.186:3000 |
+| `ha.home` | https://192.168.0.121:8123 |
+| `npm.home` | http://192.168.0.186:81 |
+| `portainer.home` | http://192.168.0.186:9000 |
+| `pihole.home` | http://192.168.0.186:8080/admin/ |
+
+Two Docker gotchas hit while setting this up (see `CLAUDE.md` for the full writeup):
+binding DNS to `0.0.0.0` conflicts with systemd-resolved's loopback stub even though the
+addresses don't overlap, and Pi-hole's default `listeningMode: LOCAL` silently drops real
+LAN client queries under Docker's bridge networking — both required explicit fixes.
 
 ## Known Issues / TODO
 

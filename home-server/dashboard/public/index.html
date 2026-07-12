@@ -438,6 +438,10 @@
           <span>Nginx Proxy Manager<br><span class="url">Reverse proxy · routing · SSL</span></span>
           <span class="arrow">↗</span>
         </a>
+        <a class="btn" href="http://192.168.0.186:8080/admin/" target="_blank" rel="noopener">
+          <span>Pi-hole Admin<br><span class="url">http://192.168.0.186:8080/admin/</span></span>
+          <span class="arrow">↗</span>
+        </a>
         <a class="btn terminal" href="ssh://joecastagna@192.168.0.186">
           <span>Open Terminal — Ubuntu<br><span class="url">ssh joecastagna@192.168.0.186</span></span>
           <span class="arrow">⌨</span>
@@ -537,8 +541,30 @@
       <div class="node-box"><strong>iMac</strong><span>UTM host, Ethernet</span></div>
       <div class="connector"></div>
       <div class="stack">
-        <div class="node-box"><strong>Ubuntu VM</strong><span>Docker → Portainer, NPM</span></div>
+        <div class="node-box"><strong>Ubuntu VM</strong><span>Docker → Portainer, NPM, Pi-hole</span></div>
         <div class="node-box"><strong>HA OS VM</strong><span>appliance, standalone</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Local DNS (Pi-hole)</h2>
+    <p>Router DHCP hands out Pi-hole (<span class="mono">192.168.0.186</span>) as the primary DNS server, with Cloudflare (<span class="mono">1.1.1.1</span>) as a fallback if the Ubuntu server is ever down — so the LAN names below resolve on every device, but the IP:port always works too, DNS or no DNS.</p>
+    <div class="container-grid">
+      <div class="container-card">
+        <div><span class="c-name">dashboard.home</span><br><span class="c-status">http://192.168.0.186:3000</span></div>
+      </div>
+      <div class="container-card">
+        <div><span class="c-name">ha.home</span><br><span class="c-status">https://192.168.0.121:8123</span></div>
+      </div>
+      <div class="container-card">
+        <div><span class="c-name">npm.home</span><br><span class="c-status">http://192.168.0.186:81</span></div>
+      </div>
+      <div class="container-card">
+        <div><span class="c-name">portainer.home</span><br><span class="c-status">http://192.168.0.186:9000</span></div>
+      </div>
+      <div class="container-card">
+        <div><span class="c-name">pihole.home</span><br><span class="c-status">http://192.168.0.186:8080/admin/</span></div>
       </div>
     </div>
   </div>
