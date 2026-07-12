@@ -633,6 +633,13 @@
   .paletteItem.selected .ptype { border-color: var(--accent-dim); color: var(--chagall-bright); }
   .paletteEmpty { padding: 18px; text-align: center; color: var(--text-mute); font-size: 13px; }
 
+  .loadingNote {
+    grid-column: 1 / -1;
+    color: var(--text-mute);
+    font-size: 12px;
+    padding: 10px 2px;
+  }
+
   footer.pagefoot {
     text-align: center;
     color: var(--text-mute);
@@ -659,7 +666,7 @@
 
 <div class="consolebar">
   <div class="wordmark"><span class="cursor">▌</span>MYDASH</div>
-  <div class="systemstate"><span class="led checking" id="masterLed"></span><span id="masterText">CHECKING…</span></div>
+  <div class="systemstate" role="status" aria-live="polite"><span class="led checking" id="masterLed" aria-hidden="true"></span><span id="masterText">CHECKING…</span></div>
   <div class="clockblock">
     <span class="paletteHint"><kbd>⌘K</kbd> or <kbd>/</kbd> to search</span>
     <span class="uptimeval" id="uptimeVal">UP —</span>
@@ -673,20 +680,20 @@
     <h2 class="sectionLabel">Telemetry</h2>
     <div class="sectionRule"></div>
   </div>
-  <div class="telemetry" id="telemetry"></div>
+  <div class="telemetry" id="telemetry"><div class="loadingNote mono">loading telemetry…</div></div>
 
   <div class="sectionHead">
     <h2 class="sectionLabel">Services</h2>
-    <span class="sectionSub">U1–U4</span>
+    <span class="sectionSub" id="serviceRange">U1–U?</span>
     <div class="sectionRule"></div>
   </div>
-  <div class="rack" id="rack"></div>
+  <div class="rack" id="rack"><div class="loadingNote mono">loading services…</div></div>
 
   <div class="sectionHead">
     <h2 class="sectionLabel">Containers</h2>
     <div class="sectionRule"></div>
   </div>
-  <div class="containerGrid" id="containerGrid"></div>
+  <div class="containerGrid" id="containerGrid"><div class="loadingNote mono">loading containers…</div></div>
 
   <footer class="pagefoot">mydash · served from 192.168.0.186 · dashboard.home</footer>
 </div>
@@ -702,8 +709,9 @@
 
 <div class="paletteOverlay" id="paletteOverlay">
   <div class="palette">
-    <input class="paletteInput mono" id="paletteInput" placeholder="Launch a service, restart a container…" autocomplete="off" spellcheck="false">
-    <div class="paletteList" id="paletteList"></div>
+    <input class="paletteInput mono" id="paletteInput" placeholder="Launch a service, restart a container…" autocomplete="off" spellcheck="false"
+      role="combobox" aria-expanded="false" aria-controls="paletteList" aria-autocomplete="list">
+    <div class="paletteList" id="paletteList" role="listbox" aria-label="Commands"></div>
   </div>
 </div>
 
@@ -740,6 +748,8 @@
   var lastUptimeSec = 0;
 
   function $(id) { return document.getElementById(id); }
+
+  $('serviceRange').textContent = 'U1–U' + SERVICES.length;
 
   function fmtUptime(sec) {
     sec = Math.max(0, Math.floor(sec));
@@ -808,6 +818,10 @@
     return fallbackState[service.id] ? service.ip : service.home;
   }
 
+  function ledStatusText(cls) {
+    return { good: 'healthy', warn: 'degraded', bad: 'down', checking: 'checking' }[cls] || cls;
+  }
+
   function ledClassFor(hostEntry) {
     if (!hostEntry) return 'checking';
     var httpOk = hostEntry.http ? hostEntry.http.up : null;
@@ -815,6 +829,35 @@
     if (httpOk === true || (httpOk === null && pingOk === true)) return 'good';
     if (pingOk === true && httpOk === false) return 'warn';
     return 'bad';
+  }
+
+  // Every HOSTS entry from server.js comes back with an `ip` field; the
+  // other top-level status keys (containers, system, piholeBlocking,
+  // timestamp) don't. Deriving the host list this way means the header's
+  // "systems nominal" count can't silently drift out of sync with HOSTS
+  // the way a hand-maintained id list did (it missed homepage/memos).
+  function hostEntries(status) {
+    return Object.keys(status)
+      .map(function (k) { return status[k]; })
+      .filter(function (v) { return v && typeof v === 'object' && !Array.isArray(v) && 'ip' in v; });
+  }
+
+  // Shared with the command palette so pause/resume/restart/stop/start only
+  // have one fetch implementation each, instead of one per UI surface.
+  function pausePihole(minutes) {
+    return fetch('/api/pihole/pause', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minutes: minutes }),
+    }).then(refresh).catch(refresh);
+  }
+  function resumePihole() {
+    return fetch('/api/pihole/resume', { method: 'POST' }).then(refresh).catch(refresh);
+  }
+  function runDockerAction(name, action, btns) {
+    if (btns) btns.forEach(function (b) { b.disabled = true; });
+    return fetch('/api/docker/' + action + '/' + encodeURIComponent(name), { method: 'POST' })
+      .then(function () { setTimeout(refresh, 800); })
+      .catch(function () { setTimeout(refresh, 1500); });
   }
 
   function piholeControlsHtml(status) {
@@ -847,7 +890,7 @@
         '<span class="unit-utag">' + svc.u + '</span>' +
         '<span class="unit-fallback-badge">IP FALLBACK</span>' +
         '<div class="unit-head">' +
-          '<span class="led ' + led + '"></span>' +
+          '<span class="led ' + led + '" role="img" aria-label="' + svc.name + ' status: ' + ledStatusText(led) + '"></span>' +
           '<div><div class="unit-name">' + svc.name + '</div><div class="unit-desc">' + svc.desc + '</div></div>' +
         '</div>' +
         '<div class="unit-addrs">' +
@@ -864,18 +907,14 @@
     // wire up pi-hole buttons
     rack.querySelectorAll('[data-pihole-pause]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var minutes = Number(btn.getAttribute('data-pihole-pause'));
         btn.disabled = true;
-        fetch('/api/pihole/pause', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ minutes: minutes }),
-        }).then(refresh).catch(refresh);
+        pausePihole(Number(btn.getAttribute('data-pihole-pause')));
       });
     });
     rack.querySelectorAll('[data-pihole-resume]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         btn.disabled = true;
-        fetch('/api/pihole/resume', { method: 'POST' }).then(refresh).catch(refresh);
+        resumePihole();
       });
     });
   }
@@ -904,14 +943,18 @@
       var up = /^up/i.test(c.status || '');
       var badge = document.createElement('div');
       badge.className = 'cbadge';
+      var actions = '';
+      if (c.controllable) {
+        actions = up ?
+          '<button class="icon-btn" title="Restart" aria-label="Restart ' + c.name + '" data-action="restart" data-name="' + c.name + '">⟳</button>' +
+          '<button class="icon-btn" title="Stop" aria-label="Stop ' + c.name + '" data-action="stop" data-name="' + c.name + '">■</button>'
+          :
+          '<button class="icon-btn" title="Start" aria-label="Start ' + c.name + '" data-action="start" data-name="' + c.name + '">▶</button>';
+      }
       badge.innerHTML =
-        '<span class="led ' + (up ? 'good' : 'bad') + '"></span>' +
+        '<span class="led ' + (up ? 'good' : 'bad') + '" role="img" aria-label="' + c.name + ' status: ' + (up ? 'running' : 'stopped') + '"></span>' +
         '<div class="cbadge-info"><div class="cbadge-name mono">' + c.name + '</div><div class="cbadge-status">' + (c.status || c.state) + '</div></div>' +
-        (c.controllable ?
-          '<div class="cbadge-actions">' +
-            '<button class="icon-btn" title="Restart" data-action="restart" data-name="' + c.name + '">⟳</button>' +
-            '<button class="icon-btn" title="Stop" data-action="stop" data-name="' + c.name + '">■</button>' +
-          '</div>' : '');
+        (actions ? '<div class="cbadge-actions">' + actions + '</div>' : '');
       grid.appendChild(badge);
     });
 
@@ -919,12 +962,8 @@
       btn.addEventListener('click', function () {
         var action = btn.getAttribute('data-action');
         var name = btn.getAttribute('data-name');
-        btn.disabled = true;
-        var sibling = btn.parentElement.querySelectorAll('.icon-btn');
-        sibling.forEach(function (b) { b.disabled = true; });
-        fetch('/api/docker/' + action + '/' + encodeURIComponent(name), { method: 'POST' })
-          .then(function () { setTimeout(refresh, 800); })
-          .catch(function () { setTimeout(refresh, 1500); });
+        var siblings = Array.prototype.slice.call(btn.parentElement.querySelectorAll('.icon-btn'));
+        runDockerAction(name, action, siblings);
       });
     });
   }
@@ -932,18 +971,25 @@
   // ---------- master status + header ----------
 
   function renderHeader(status) {
-    var hostKeys = ['ubuntu', 'ha', 'imac', 'npm', 'pihole', 'portainer'];
-    var down = 0, total = 0;
-    hostKeys.forEach(function (k) {
-      var h = status[k];
-      if (!h) return;
-      total++;
-      if (!h.ping || !h.ping.up) down++;
+    var badCount = 0, warnCount = 0;
+    hostEntries(status).forEach(function (h) {
+      var sev = ledClassFor(h);
+      if (sev === 'bad') badCount++;
+      else if (sev === 'warn') warnCount++;
     });
     var led = $('masterLed'), text = $('masterText');
-    if (down === 0) { led.className = 'led good'; text.textContent = 'ALL SYSTEMS NOMINAL'; }
-    else if (down === 1) { led.className = 'led warn'; text.textContent = 'DEGRADED — 1 HOST DOWN'; }
-    else { led.className = 'led bad'; text.textContent = down + ' HOSTS DOWN'; }
+    if (badCount === 0 && warnCount === 0) {
+      led.className = 'led good'; text.textContent = 'ALL SYSTEMS NOMINAL';
+    } else if (badCount === 0) {
+      led.className = 'led warn';
+      text.textContent = warnCount + (warnCount === 1 ? ' HOST DEGRADED' : ' HOSTS DEGRADED');
+    } else if (badCount === 1 && warnCount === 0) {
+      led.className = 'led warn'; text.textContent = 'DEGRADED — 1 HOST DOWN';
+    } else {
+      led.className = 'led bad';
+      text.textContent = badCount + (badCount === 1 ? ' HOST DOWN' : ' HOSTS DOWN') +
+        (warnCount ? ', ' + warnCount + ' DEGRADED' : '');
+    }
 
     if (status.system) {
       lastUptimeSec = status.system.uptimeSec;
@@ -976,6 +1022,15 @@
     }).catch(function () {
       $('masterLed').className = 'led bad';
       $('masterText').textContent = 'DASHBOARD BACKEND UNREACHABLE';
+      // Only first-load failures need a UI message here — a failed refresh
+      // after the page already has real data just leaves the last-known
+      // good state on screen instead of clearing it out from under the user.
+      if (!latestStatus) {
+        var msg = '<div class="loadingNote mono">backend unreachable — retrying…</div>';
+        $('telemetry').innerHTML = msg;
+        $('rack').innerHTML = msg;
+        $('containerGrid').innerHTML = msg;
+      }
     });
   }
   refresh();
@@ -1056,25 +1111,23 @@
     if (latestStatus && latestStatus.containers) {
       latestStatus.containers.forEach(function (c) {
         if (!c.controllable) return;
-        cmds.push({ type: 'restart', label: 'Restart ' + c.name, run: function () {
-          fetch('/api/docker/restart/' + encodeURIComponent(c.name), { method: 'POST' }).then(function () { setTimeout(refresh, 800); });
-        }});
-        cmds.push({ type: 'stop', label: 'Stop ' + c.name, run: function () {
-          fetch('/api/docker/stop/' + encodeURIComponent(c.name), { method: 'POST' }).then(function () { setTimeout(refresh, 800); });
-        }});
+        var up = /^up/i.test(c.status || '');
+        if (up) {
+          cmds.push({ type: 'restart', label: 'Restart ' + c.name, run: function () { runDockerAction(c.name, 'restart'); } });
+          cmds.push({ type: 'stop', label: 'Stop ' + c.name, run: function () { runDockerAction(c.name, 'stop'); } });
+        } else {
+          cmds.push({ type: 'start', label: 'Start ' + c.name, run: function () { runDockerAction(c.name, 'start'); } });
+        }
       });
     }
     [5, 10, 30].forEach(function (m) {
-      cmds.push({ type: 'pi-hole', label: 'Pause Pi-hole ' + m + 'm', run: function () {
-        fetch('/api/pihole/pause', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ minutes: m }) }).then(refresh);
-      }});
+      cmds.push({ type: 'pi-hole', label: 'Pause Pi-hole ' + m + 'm', run: function () { pausePihole(m); } });
     });
-    cmds.push({ type: 'pi-hole', label: 'Resume Pi-hole blocking', run: function () {
-      fetch('/api/pihole/resume', { method: 'POST' }).then(refresh);
-    }});
+    cmds.push({ type: 'pi-hole', label: 'Resume Pi-hole blocking', run: resumePihole });
     cmds.push({ type: 'view', label: 'Jump to logs', run: function () { $('logsDrawer').classList.add('open'); } });
     cmds.push({ type: 'copy', label: 'Copy SSH — Ubuntu server', run: function () { navigator.clipboard.writeText('ssh joecastagna@192.168.0.186'); } });
     cmds.push({ type: 'copy', label: 'Copy SSH — Home Assistant', run: function () { navigator.clipboard.writeText('ssh root@192.168.0.121'); } });
+    cmds.push({ type: 'copy', label: 'Copy SSH — iMac (UTM host)', run: function () { navigator.clipboard.writeText('ssh joecastagna@192.168.0.89'); } });
     return cmds;
   }
 
@@ -1088,20 +1141,24 @@
       return;
     }
     paletteList.innerHTML = filtered.map(function (c, i) {
-      return '<div class="paletteItem' + (i === 0 ? ' selected' : '') + '" data-index="' + i + '">' +
+      return '<div class="paletteItem' + (i === 0 ? ' selected' : '') + '" id="palette-opt-' + i + '" role="option" aria-selected="' + (i === 0) + '" data-index="' + i + '">' +
         '<span class="ptype">' + c.type + '</span><span>' + c.label + '</span></div>';
     }).join('');
     paletteList.querySelectorAll('.paletteItem').forEach(function (el) {
       el.addEventListener('click', function () { runSelected(Number(el.getAttribute('data-index'))); });
       el.addEventListener('mouseenter', function () { setSelected(Number(el.getAttribute('data-index'))); });
     });
+    setSelected(0);
   }
 
   function setSelected(i) {
     selectedIndex = i;
     paletteList.querySelectorAll('.paletteItem').forEach(function (el, idx) {
-      el.classList.toggle('selected', idx === i);
+      var isSel = idx === i;
+      el.classList.toggle('selected', isSel);
+      el.setAttribute('aria-selected', String(isSel));
     });
+    paletteInput.setAttribute('aria-activedescendant', filtered.length ? 'palette-opt-' + i : '');
   }
 
   function runSelected(i) {
@@ -1113,12 +1170,14 @@
 
   function openPalette() {
     paletteOverlay.classList.add('open');
+    paletteInput.setAttribute('aria-expanded', 'true');
     paletteInput.value = '';
     renderPalette();
     setTimeout(function () { paletteInput.focus(); }, 10);
   }
   function closePalette() {
     paletteOverlay.classList.remove('open');
+    paletteInput.setAttribute('aria-expanded', 'false');
   }
 
   paletteInput.addEventListener('input', renderPalette);
