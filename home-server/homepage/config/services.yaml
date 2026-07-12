@@ -1,0 +1,36 @@
+---
+- Home Lab:
+    - Home Dashboard:
+        href: http://dashboard.home
+        description: HOME/OPS command center
+        icon: homeassistant.png
+        server: my-docker
+        container: home-dashboard
+
+    - Home Assistant:
+        href: https://ha.home:8123
+        description: Home Assistant OS VM
+        icon: home-assistant.png
+
+    - Nginx Proxy Manager:
+        href: http://npm.home
+        description: Reverse proxy for *.home hosts
+        icon: nginx-proxy-manager.png
+        # add `server: my-docker` / `container: <name>` once the NPM container name is confirmed
+
+    - Portainer:
+        href: http://portainer.home
+        description: Docker management UI
+        icon: portainer.png
+        # add `server: my-docker` / `container: <name>` once the Portainer container name is confirmed
+
+    - Pi-hole:
+        href: http://pihole.home:8080/admin/
+        description: LAN DNS + ad blocking
+        icon: pi-hole.png
+        server: my-docker
+        container: pihole
+        widget:
+          type: pihole
+          url: http://192.168.0.186:8080
+          key: '{{HOMEPAGE_VAR_PIHOLE_PASSWORD}}'

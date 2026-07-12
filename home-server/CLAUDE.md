@@ -17,6 +17,8 @@ configs — it is not automatically synced, see "Keeping this in sync" below.
 - `pihole/` — docker-compose for the local DNS resolver (see "Pi-hole / local DNS" below).
   Only the compose file is mirrored; `etc-pihole/` and `etc-dnsmasq.d/` (live state:
   gravity DB, query log) stay server-side only, never committed.
+- `homepage/` — docker-compose + config for [Homepage](https://gethomepage.dev), a static
+  start page linking out to the other services (see "Homepage (start page)" below).
 
 ## Hosts
 
@@ -117,6 +119,35 @@ Current local DNS records (`dns.hosts`): `dashboard.home`, `ha.home`, `npm.home`
 [`docs/startup-guide.md`](docs/startup-guide.md) and on the dashboard's "Local DNS" panel.
 Always keep both forms documented side by side: the `.home` name is convenient but
 depends on Pi-hole being up; the IP:port always works.
+
+## Homepage (start page)
+
+[Homepage](https://gethomepage.dev) is a static link/status page for the whole lab, added
+July 2026. Source in `homepage/`.
+```bash
+scp -r homepage/docker-compose.yml homepage/config joecastagna@192.168.0.186:~/apps/homepage/
+ssh joecastagna@192.168.0.186 "cd ~/apps/homepage && docker compose up -d"
+```
+Then copy any config changes made server-side back here and commit — this direction is
+source of truth, same as the dashboard.
+
+- **Port 3001**, not the default 3000 — `home-dashboard` already owns 3000 on this host.
+- **`docker.sock` mounted read-only** — enables the Docker widget (container name/state
+  shown on each service card) without granting start/stop/restart control. Far less risky
+  than the dashboard's read-write mount, but a read-only socket still exposes all
+  container names, images, and env-derived labels on the host to anything that can reach
+  the Homepage container.
+- **`config/`** (`settings.yaml`, `services.yaml`, `widgets.yaml`, `bookmarks.yaml`,
+  `docker.yaml`) is bind-mounted, so edits here take effect on the next
+  `docker compose up -d` (most Homepage config is hot-reloaded, no rebuild needed).
+- **Pi-hole widget** reads `PIHOLE_PASSWORD` via `HOMEPAGE_VAR_PIHOLE_PASSWORD` (same
+  `.env` file/value as `pihole/` and `dashboard/` already use on the server).
+- NPM and Portainer service cards don't yet have `container:` mappings in
+  `services.yaml` — fill those in with the real container names on the server if you want
+  live status for them too.
+- Needs an NPM proxy host (`homepage.home` → `192.168.0.186:3001`) and a Pi-hole local DNS
+  record for `homepage.home`, same as the other `.home` names — neither is done yet since
+  both live server-side.
 
 ## Known issues (see startup-guide.md for details)
 

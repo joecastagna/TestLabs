@@ -10,6 +10,7 @@
 | **Portainer** | http://portainer.home | http://192.168.0.186:9000 |
 | **Nginx Proxy Manager** | http://npm.home | http://192.168.0.186:81 |
 | **Pi-hole Admin** | http://pihole.home:8080/admin/ | http://192.168.0.186:8080/admin/ |
+| **Homepage** | http://homepage.home | http://192.168.0.186:3001 |
 
 | SSH | Command |
 |---|---|
@@ -29,7 +30,8 @@ MacBook (you) ── LAN ── iMac (192.168.0.89, UTM host)
                            │     ├── home-dashboard (port 3000, proxied via NPM on :80)
                            │     ├── nginx-proxy-manager (ports 80/81/443)
                            │     ├── portainer (port 9000)
-                           │     └── pihole (DNS :53, admin UI :8080)
+                           │     ├── pihole (DNS :53, admin UI :8080)
+                           │     └── homepage (port 3001)
                            └── HA OS VM (192.168.0.121:8123) ── Home Assistant
 
 Router DHCP → Pi-hole (192.168.0.186) as primary DNS, 1.1.1.1 as fallback
@@ -217,6 +219,31 @@ Two Docker gotchas hit while setting this up (see `CLAUDE.md` for the full write
 binding DNS to `0.0.0.0` conflicts with systemd-resolved's loopback stub even though the
 addresses don't overlap, and Pi-hole's default `listeningMode: LOCAL` silently drops real
 LAN client queries under Docker's bridge networking — both required explicit fixes.
+
+## Homepage (start page)
+
+Added July 2026 — a static [Homepage](https://gethomepage.dev) link/status page for the
+whole lab, source in [`../homepage/`](../homepage/).
+
+- **URL**: http://homepage.home or http://192.168.0.186:3001 (direct)
+- **Container**: `homepage` on Ubuntu server, port 3001 (3000 is taken by home-dashboard)
+- **Docker socket**: mounted **read-only** — enables per-service container status without
+  granting start/stop/restart control (unlike the dashboard's read-write mount)
+- **Config**: `services.yaml`, `settings.yaml`, `widgets.yaml`, `bookmarks.yaml`,
+  `docker.yaml` under `homepage/config/`, bind-mounted so most edits hot-reload without a
+  rebuild
+- **Pi-hole widget** password comes from `HOMEPAGE_VAR_PIHOLE_PASSWORD`, sourced from the
+  same `.env` `PIHOLE_PASSWORD` value already used by `pihole/` and `dashboard/`
+- **TODO**: NPM proxy host + Pi-hole local DNS record for `homepage.home` (both live
+  server-side, not done yet); fill in `container:` names for the NPM and Portainer cards
+  in `services.yaml` once confirmed on the server
+
+### Deploy
+
+```bash
+scp -r homepage/docker-compose.yml homepage/config joecastagna@192.168.0.186:~/apps/homepage/
+ssh joecastagna@192.168.0.186 "cd ~/apps/homepage && docker compose up -d"
+```
 
 ## Known Issues / TODO
 

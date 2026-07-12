@@ -1,0 +1,8 @@
+title: Home Lab
+theme: dark
+color: slate
+target: _self
+layout:
+  Home Lab:
+    style: row
+    columns: 3

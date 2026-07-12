@@ -1,0 +1,14 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: 'homepage.home,192.168.0.186:3001'
+      HOMEPAGE_VAR_PIHOLE_PASSWORD: '${PIHOLE_PASSWORD}'
+    volumes:
+      - ./config:/app/config
+      # read-only: enables container auto-discovery/status widget, no start/stop control.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
