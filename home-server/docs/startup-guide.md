@@ -166,14 +166,25 @@ Cast entities (Google Cast) can receive `play_media`, TTS, camera streams, and L
 dashboard casts. Remote entities (Android TV Remote / Vizio SmartCast) handle power,
 D-pad, volume, and app launching. Both are needed — not duplicates.
 
-## Home Dashboard (Dynamic)
+## Home Dashboard — "HOME/OPS" command center (rewritten July 2026)
 
 - **URL**: http://dashboard.home or http://192.168.0.186:3000 (direct)
 - **Container**: `home-dashboard` on Ubuntu server
 - **Source**: mirrored in [`../dashboard/`](../dashboard/)
-- **Features**: Live ping checks, HA HTTP check, Docker container status, 15-second auto-refresh, dark mode, local DNS reference panel
-- **Docker socket**: mounted read-only for container status
-- **Network mode**: host (for LAN ping access)
+- **Features**:
+  - Live telemetry: host CPU/RAM, ping latency to iMac / HA / this host
+  - Services rack (HA, NPM, Portainer, Pi-hole) — each card shows both its `.home` name
+    and raw IP:port, and auto-swaps to the IP if the `.home` name doesn't resolve on your
+    current device (probed client-side on page load)
+  - Docker container status + restart/stop, scoped to an allowlist (see CLAUDE.md for the
+    security tradeoff — this needs `docker.sock` mounted read-write)
+  - Pi-hole pause controls (5/10/30 min) right on its card
+  - Live log stream (SSE) in a collapsible drawer at the bottom
+  - Command palette — `⌘K` or `/` — to launch services or run container/Pi-hole actions
+    from the keyboard
+- **Docker socket**: mounted **read-write** (was read-only) — needed for the restart/stop
+  controls; see the security note in `CLAUDE.md`
+- **Network mode**: host (for LAN ping access and reaching Pi-hole on localhost)
 - **NPM proxy**: `dashboard.home` → `192.168.0.186:3000` (only reachable once a device is using Pi-hole for DNS)
 
 ### Rebuild/restart dashboard

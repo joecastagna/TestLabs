@@ -4,5 +4,13 @@ services:
     container_name: home-dashboard
     restart: unless-stopped
     network_mode: host
+    environment:
+      PIHOLE_HOST: '127.0.0.1'
+      PIHOLE_PORT: '8080'
+      PIHOLE_PASSWORD: '${PIHOLE_PASSWORD}'
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # read-write: required for the container restart/stop/start controls.
+      # This gives the dashboard container root-equivalent control over the
+      # host — the app only exposes it through a fixed allowlist, never a
+      # raw Docker API passthrough. See CLAUDE.md for the tradeoff.
+      - /var/run/docker.sock:/var/run/docker.sock

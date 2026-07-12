@@ -11,8 +11,9 @@ configs — it is not automatically synced, see "Keeping this in sync" below.
 - `ha-config/` — mirror of the Home Assistant `/config` dir (automations, configuration,
   scenes, scripts). Secrets (`secrets.yaml`, `.storage/`, service-account JSON) are
   intentionally excluded — this repo is public.
-- `dashboard/` — mirror of `~/apps/home-dashboard` on the Ubuntu server: a small Node.js
-  status dashboard (ping checks, HA health, Docker container status).
+- `dashboard/` — mirror of `~/apps/home-dashboard` on the Ubuntu server: a Node.js command
+  center (telemetry, service launcher with DNS fallback, Docker controls, Pi-hole pause,
+  live log stream, command palette). See "Working with the dashboard" below.
 - `pihole/` — docker-compose for the local DNS resolver (see "Pi-hole / local DNS" below).
   Only the compose file is mirrored; `etc-pihole/` and `etc-dnsmasq.d/` (live state:
   gravity DB, query log) stay server-side only, never committed.
@@ -49,13 +50,40 @@ server-side only.
 
 ## Working with the dashboard
 
-Source lives in `dashboard/`. To deploy a change:
+Rewritten July 2026 as a rack-console command center (see `dashboard/public/index.html`
+and `dashboard/server.js`). Source lives in `dashboard/`. To deploy a change:
 ```bash
-scp dashboard/server.js dashboard/public/index.html joecastagna@192.168.0.186:~/apps/home-dashboard/
+scp dashboard/server.js dashboard/docker-compose.yml joecastagna@192.168.0.186:~/apps/home-dashboard/
+scp dashboard/public/index.html joecastagna@192.168.0.186:~/apps/home-dashboard/public/index.html
 ssh joecastagna@192.168.0.186 "cd ~/apps/home-dashboard && docker compose up -d --build"
 ```
 Then copy the file back here (or just re-push from here — this direction is source of
 truth for the dashboard, unlike ha-config which the server can also mutate via the UI).
+
+**`docker.sock` is mounted read-write**, not read-only — required for the container
+restart/stop/start controls. This is a real security tradeoff: read-write access to the
+host's Docker socket is close to root-equivalent control of the whole host (spawn
+privileged containers, mount the host filesystem, etc.). The app only exposes this
+through a fixed allowlist (`CONTROLLABLE` in `server.js` — `home-dashboard`,
+`nginx-proxy-manager`, `portainer`, `pihole`) with no raw Docker API passthrough, but the
+mount itself grants more than that. Don't expose this dashboard's port outside the LAN.
+
+**`~/apps/home-dashboard/.env`** on the server holds `PIHOLE_PASSWORD` (same password as
+`~/apps/pihole/.env`) — not committed, not mirrored here. The dashboard authenticates to
+Pi-hole's v6 REST API (`/api/auth` → session id → `/api/dns/blocking`) to read/pause
+blocking status; sessions are cached and refreshed automatically.
+
+**Docker log streaming** (`/api/logs/stream`, SSE) demuxes Docker's raw log frame format
+(8-byte header: stream type + big-endian payload size) manually — there's no dependency
+for this, just a small stateful parser in `server.js`.
+
+**Smart fallback routing**: on page load, the frontend probes each `.home` name with a
+600ms-timeout `fetch(..., {mode:'no-cors'})` against the client's *own* DNS resolver (not
+the server's) — a rejected/timed-out promise means that browser can't resolve or reach the
+name, and the UI swaps that service's primary link to the raw IP:port and shows an "IP
+FALLBACK" badge. This is why it can show fallback active on one device while working fine
+on another — it reflects whatever DNS *that specific browser* is using, which matters
+while devices are still catching up to the Pi-hole DHCP change (see below).
 
 ## Pi-hole / local DNS
 
