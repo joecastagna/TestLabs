@@ -318,7 +318,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    // No validators (ETag/Last-Modified) were being sent, so some browsers
+    // could serve a stale cached copy of the page after a deploy instead of
+    // refetching — same reasoning /api/status already applies below.
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html')));
     return;
   }
