@@ -24,6 +24,7 @@ const HOSTS = [
   { id: 'npm', name: 'Nginx Proxy Manager', ip: '192.168.0.186', port: 81, https: false },
   { id: 'pihole', name: 'Pi-hole', ip: '192.168.0.186', port: 8080, https: false },
   { id: 'portainer', name: 'Portainer', ip: '192.168.0.186', port: 9000, https: false },
+  { id: 'homepage', name: 'Homepage', ip: '192.168.0.186', port: 3001, https: false },
 ];
 
 // ---------- system telemetry ----------
