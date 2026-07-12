@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Server</title>
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --surface-2: #f5f8fa;
+    --border: #d8e0e6;
+    --text: #1b232c;
+    --text-muted: #5b6672;
+    --accent: #1f6fb3;
+    --accent-soft: #e4eff8;
+    --accent-ink: #ffffff;
+    --good: #2f9e58;
+    --bad: #d94452;
+    --warn: #e5a00d;
+    --shadow: rgba(24, 34, 46, 0.08);
+    --shadow-strong: rgba(24, 34, 46, 0.14);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10151b;
+      --surface: #171e26;
+      --surface-2: #1c242e;
+      --border: #2a333e;
+      --text: #e6ebef;
+      --text-muted: #8a96a3;
+      --accent: #56a8ec;
+      --accent-soft: rgba(86, 168, 236, 0.13);
+      --accent-ink: #0b1117;
+      --good: #4cc17e;
+      --bad: #e5636e;
+      --warn: #f0b429;
+      --shadow: rgba(0, 0, 0, 0.35);
+      --shadow-strong: rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mono {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+  }
+
+  .chrome {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px 10px 0 0;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 0 var(--border);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ec6a5e; }
+  .dot.y { background: #f4bf4f; }
+  .dot.g { background: #61c454; }
+  .chrome-title {
+    margin-left: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+  .chrome-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .status-indicator {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status-indicator .pulse {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--good);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  header.masthead {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 32px 32px 28px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 32px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .lede {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--text-muted);
+    font-size: 16px;
+  }
+
+  .nodes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 720px) {
+    .nodes { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 2px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: relative;
+  }
+
+  .card-head { display: flex; flex-direction: column; gap: 4px; }
+  .card-head .name {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-head .role { color: var(--text-muted); font-size: 13.5px; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.online { background: var(--good); }
+  .status-dot.offline { background: var(--bad); }
+  .status-dot.checking { background: var(--warn); animation: pulse 1s infinite; }
+
+  .ping-label {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 5px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .badge.lan {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: transparent;
+  }
+
+  dl.facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 6px;
+    column-gap: 14px;
+    font-size: 13.5px;
+  }
+  dl.facts dt { color: var(--text-muted); }
+  dl.facts dd { margin: 0; }
+
+  .links { display: flex; flex-direction: column; gap: 8px; }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+    cursor: pointer;
+  }
+  .btn:hover, .btn:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px var(--shadow-strong);
+    transform: translateY(-1px);
+  }
+  .btn .url { color: var(--text-muted); font-size: 12px; }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn.primary .url { color: var(--accent-ink); opacity: 0.75; }
+  .btn .arrow { opacity: 0.5; }
+  .btn.terminal {
+    background: #1a1a2e;
+    border-color: #2a2a4a;
+    color: #4cc17e;
+  }
+  .btn.terminal .url { color: #8a96a3; }
+  .btn.terminal:hover {
+    border-color: #4cc17e;
+    box-shadow: 0 2px 8px rgba(76, 193, 126, 0.2);
+  }
+
+  .ssh-block {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    overflow-x: auto;
+  }
+  .ssh-block code { font-size: 13px; white-space: nowrap; }
+  .copy-btn {
+    font-family: inherit;
+    font-size: 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 9px;
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 26px 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+  .panel h2 {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 15px;
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .panel p { margin: 0 0 18px; max-width: 68ch; color: var(--text-muted); }
+
+  .container-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .container-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .container-card .c-name {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .container-card .c-status {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .node-box {
+    flex: 0 0 auto;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 132px;
+  }
+  .node-box strong { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  .node-box span { color: var(--text-muted); }
+  .connector {
+    flex: 0 0 auto;
+    width: 34px;
+    align-self: center;
+    height: 1px;
+    background: var(--border);
+    position: relative;
+  }
+  .connector::after {
+    content: "";
+    position: absolute;
+    right: -1px; top: -3px;
+    width: 6px; height: 6px;
+    border-right: 1px solid var(--text-muted);
+    border-bottom: 1px solid var(--text-muted);
+    transform: rotate(-45deg);
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .cheat-grid { display: grid; gap: 8px; }
+
+  footer {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn { transition: none; }
+    .pulse, .status-dot.checking { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="chrome">
+    <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+    <span class="chrome-title">home-dashboard</span>
+    <div class="chrome-right">
+      <span class="status-indicator">
+        <span class="pulse"></span>
+        <span id="last-check">checking...</span>
+      </span>
+    </div>
+  </div>
+  <header class="masthead">
+    <p class="eyebrow">Stephanie's iMac · Home LAN</p>
+    <h1>Home Server</h1>
+    <p class="lede">Live dashboard for the home network. Status updates every 15 seconds.</p>
+  </header>
+
+  <div class="nodes">
+
+    <div class="card">
+      <div class="card-head">
+        <span class="name"><span class="status-dot checking" id="dot-ubuntu"></span> Ubuntu-Home-Server</span>
+        <span class="role">Docker host — apps, reverse proxy, container management</span>
+      </div>
+      <div class="badge-row">
+        <span class="badge lan">LAN only</span>
+        <span class="badge">Ubuntu 26.04 LTS</span>
+        <span class="ping-label" id="ping-ubuntu">--</span>
+      </div>
+      <dl class="facts mono">
+        <dt>Address</dt><dd>192.168.0.186</dd>
+        <dt>Resources</dt><dd>16 GB RAM · 4 vCPU · 60 GB disk</dd>
+      </dl>
+      <div class="links">
+        <a class="btn primary" href="http://192.168.0.186:9000" target="_blank" rel="noopener">
+          <span>Portainer<br><span class="url">Manage containers, images, volumes</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="btn" href="http://192.168.0.186:81" target="_blank" rel="noopener">
+          <span>Nginx Proxy Manager<br><span class="url">Reverse proxy · routing · SSL</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="btn terminal" href="ssh://joecastagna@192.168.0.186">
+          <span>Open Terminal — Ubuntu<br><span class="url">ssh joecastagna@192.168.0.186</span></span>
+          <span class="arrow">⌨</span>
+        </a>
+      </div>
+      <div class="ssh-block">
+        <code class="mono" id="ssh-cmd">ssh joecastagna@192.168.0.186</code>
+        <button class="copy-btn" onclick="copyText('ssh-cmd', this)">Copy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="name"><span class="status-dot checking" id="dot-ha"></span> Home-Assistant-OS</span>
+        <span class="role">Home automation appliance</span>
+      </div>
+      <div class="badge-row">
+        <span class="badge lan">LAN only</span>
+        <span class="badge">HA OS 18.1</span>
+        <span class="ping-label" id="ping-ha">--</span>
+      </div>
+      <dl class="facts mono">
+        <dt>Address</dt><dd>192.168.0.121</dd>
+        <dt>Hostname</dt><dd>homeassistant.local</dd>
+        <dt>External</dt><dd>joecastagna-ha.duckdns.org</dd>
+      </dl>
+      <div class="links">
+        <a class="btn primary" href="https://192.168.0.121:8123" target="_blank" rel="noopener">
+          <span>Home Assistant<br><span class="url">https://192.168.0.121:8123</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="btn" href="https://joecastagna-ha.duckdns.org:8123" target="_blank" rel="noopener">
+          <span>Home Assistant (DuckDNS)<br><span class="url">remote access via DuckDNS</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="btn terminal" href="ssh://root@192.168.0.121">
+          <span>Open Terminal — Home Assistant<br><span class="url">ssh root@192.168.0.121</span></span>
+          <span class="arrow">⌨</span>
+        </a>
+      </div>
+      <div class="ssh-block">
+        <code class="mono" id="ssh-ha">ssh root@192.168.0.121</code>
+        <button class="copy-btn" onclick="copyText('ssh-ha', this)">Copy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="name"><span class="status-dot checking" id="dot-imac"></span> Stephanie's iMac</span>
+        <span class="role">Host machine — Screen Sharing &amp; SSH</span>
+      </div>
+      <div class="badge-row">
+        <span class="badge lan">LAN only</span>
+        <span class="badge">macOS · UTM host</span>
+        <span class="ping-label" id="ping-imac">--</span>
+      </div>
+      <dl class="facts mono">
+        <dt>Address</dt><dd>192.168.0.89</dd>
+        <dt>Hostname</dt><dd>Stephanies-iMac.local</dd>
+        <dt>User</dt><dd>joecastagna</dd>
+      </dl>
+      <div class="links">
+        <a class="btn primary" href="vnc://192.168.0.89" target="_blank" rel="noopener">
+          <span>Screen Sharing<br><span class="url">Full remote desktop</span></span>
+          <span class="arrow">↗</span>
+        </a>
+        <a class="btn terminal" href="ssh://joecastagna@192.168.0.89">
+          <span>Open Terminal — iMac<br><span class="url">ssh joecastagna@192.168.0.89</span></span>
+          <span class="arrow">⌨</span>
+        </a>
+      </div>
+      <div class="ssh-block">
+        <code class="mono" id="ssh-imac">ssh joecastagna@192.168.0.89</code>
+        <button class="copy-btn" onclick="copyText('ssh-imac', this)">Copy</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel">
+    <h2>Docker Containers</h2>
+    <p>Live status of running containers on the Ubuntu server.</p>
+    <div class="container-grid" id="containers">
+      <div class="container-card">
+        <span class="status-dot checking"></span>
+        <div><span class="c-name">Loading...</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>How it fits together</h2>
+    <p>Your Mac talks to Stephanie's iMac over the LAN. UTM runs two independent VMs on that machine — one is a general-purpose Docker host, the other is a dedicated Home Assistant appliance.</p>
+    <div class="diagram">
+      <div class="node-box"><strong>Your Mac</strong><span>this browser</span></div>
+      <div class="connector"></div>
+      <div class="node-box"><strong>iMac</strong><span>UTM host, Ethernet</span></div>
+      <div class="connector"></div>
+      <div class="stack">
+        <div class="node-box"><strong>Ubuntu VM</strong><span>Docker → Portainer, NPM</span></div>
+        <div class="node-box"><strong>HA OS VM</strong><span>appliance, standalone</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Cheat sheet</h2>
+    <p style="margin-bottom:12px">Common commands once connected:</p>
+    <div class="cheat-grid">
+      <div class="ssh-block">
+        <code class="mono">docker ps</code>
+        <span class="url mono" style="color:var(--text-muted)">list running containers</span>
+      </div>
+      <div class="ssh-block">
+        <code class="mono">docker compose -f ~/apps/&lt;name&gt;/docker-compose.yml logs -f</code>
+        <span class="url mono" style="color:var(--text-muted)">tail an app's logs</span>
+      </div>
+      <div class="ssh-block">
+        <code class="mono">ha core info</code>
+        <span class="url mono" style="color:var(--text-muted)">HA version &amp; status (from HA SSH)</span>
+      </div>
+      <div class="ssh-block">
+        <code class="mono">ha core restart</code>
+        <span class="url mono" style="color:var(--text-muted)">restart Home Assistant Core</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Served from Ubuntu-Home-Server · <span class="mono">192.168.0.186</span>
+  </footer>
+
+</div>
+
+<script>
+  function copyText(id, btn) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = original; }, 1400);
+    });
+  }
+
+  async function fetchStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+
+      ['ubuntu', 'ha', 'imac'].forEach(id => {
+        const dot = document.getElementById(`dot-${id}`);
+        const ping = document.getElementById(`ping-${id}`);
+        const info = data[id];
+        if (!info) return;
+
+        dot.className = 'status-dot ' + (info.ping.up ? 'online' : 'offline');
+        ping.textContent = info.ping.up ? `${info.ping.ms ?? '?'}ms` : 'offline';
+      });
+
+      // Docker containers
+      const grid = document.getElementById('containers');
+      if (data.containers && data.containers.length > 0) {
+        grid.innerHTML = data.containers.map(c => {
+          const up = c.status.toLowerCase().startsWith('up');
+          return `<div class="container-card">
+            <span class="status-dot ${up ? 'online' : 'offline'}"></span>
+            <div>
+              <span class="c-name">${c.name}</span><br>
+              <span class="c-status">${c.status}</span>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        grid.innerHTML = '<div class="container-card"><span class="status-dot offline"></span><div><span class="c-name">No containers running</span></div></div>';
+      }
+
+      const now = new Date();
+      document.getElementById('last-check').textContent =
+        `updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    } catch (e) {
+      document.getElementById('last-check').textContent = 'connection error';
+    }
+  }
+
+  fetchStatus();
+  setInterval(fetchStatus, 15000);
+</script>
+</body>
+</html>

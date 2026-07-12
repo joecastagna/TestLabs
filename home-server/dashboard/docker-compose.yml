@@ -1,0 +1,8 @@
+services:
+  home-dashboard:
+    build: .
+    container_name: home-dashboard
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro

@@ -1,0 +1,360 @@
+- id: office_off_weeknights
+  alias: Office Off Weeknights
+  description: Announce then turn off all office devices at 2:00 AM Sun-Thu, unless
+    cancelled by voice
+  triggers:
+  - trigger: time
+    at: 02:00:00
+  conditions:
+  - condition: time
+    weekday:
+    - sun
+    - mon
+    - tue
+    - wed
+    - thu
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.im_awake
+  - action: tts.speak
+    target:
+      entity_id: tts.google_translate_en_com
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: It's getting late. I'm going to shut everything down in the office
+        in two minutes. If you're working, just say, Hey Google, turn on I'm awake.
+  - delay:
+      minutes: 2
+  - condition: state
+    entity_id: input_boolean.im_awake
+    state: 'off'
+  - action: light.turn_off
+    target:
+      entity_id:
+      - light.office_corner_lamp
+      - light.office_office_floor_lamp
+      - light.office_office_top_2
+      - light.office_joes_lamp
+      - light.office_office_top_1
+      - light.office_office
+  - action: media_player.turn_off
+    target:
+      entity_id:
+      - media_player.office_speaker
+      - media_player.office_speakers
+  - action: switch.turn_off
+    target:
+      entity_id:
+      - switch.oak
+      - switch.glitter
+      - switch.christmas_tree
+  mode: single
+- id: '1783798571903'
+  alias: 'Tv bed lights off '
+  description: ''
+  triggers:
+  - trigger: media_player.turned_on
+    target:
+      entity_id: media_player.pillow_tv_2
+    options:
+      for: 00:00:00
+  conditions:
+  - condition: time
+    after: '20:08:00'
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    target:
+      device_id: 7e2f664ad1e28e66fb06dcd39b2883e7
+    data: {}
+  mode: single
+- id: mets_game_start_gemini
+  alias: Mets Game Start - Gemini Notification
+  description: AI-generated push notification and TTS when Mets game starts
+  triggers:
+  - platform: state
+    entity_id: sensor.mlb_new_york_mets
+    to: IN
+    from: PRE
+  conditions: []
+  actions:
+  - data:
+      instructions: 'Write a short punchy announcement (1-2 sentences, no hashtags)
+        for a passionate Mets fan. The New York Mets (record: {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''team_record'') }}) are playing at {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''team_homeaway'') }} against the {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''opponent_name'') }} (record: {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''opponent_record'') }}). On TV: {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''tv_network'') }}.'
+      entity_id: ai_task.google_ai_task
+      task_name: Mets Game Start Announcement
+    response_variable: gemini_response
+    action: ai_task.generate_data
+  - data:
+      title: ⚾ Mets Game Time!
+      message: '{{ gemini_response.data }}'
+    action: notify.mobile_app_joe_castagnas_iphone_14_max_2022
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.bedroom_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: '{{ gemini_response.data }}'
+  mode: single
+- id: mets_score_gemini
+  alias: Mets Score - Gemini Notification
+  description: AI-generated push notification and TTS when Mets score
+  triggers:
+  - platform: state
+    entity_id: sensor.mlb_new_york_mets
+    attribute: team_score
+  conditions:
+  - condition: state
+    entity_id: sensor.mlb_new_york_mets
+    state: IN
+  - condition: template
+    value_template: '{{ state_attr(''sensor.mlb_new_york_mets'', ''team_score'') |
+      int > 0 }}'
+  actions:
+  - data:
+      instructions: 'Write a one-sentence exciting announcement (no hashtags) for
+        a Mets fan who just scored. Current score: Mets {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''team_score'') }}, {{ state_attr(''sensor.mlb_new_york_mets'', ''opponent_name'')
+        }} {{ state_attr(''sensor.mlb_new_york_mets'', ''opponent_score'') }}. Inning:
+        {{ state_attr(''sensor.mlb_new_york_mets'', ''clock'') }}.'
+      entity_id: ai_task.google_ai_task
+      task_name: Mets Score Update
+    response_variable: gemini_response
+    action: ai_task.generate_data
+  - data:
+      title: "\U0001F3C3 Mets Score!"
+      message: '{{ gemini_response.data }}'
+    action: notify.mobile_app_joe_castagnas_iphone_14_max_2022
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.bedroom_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: '{{ gemini_response.data }}'
+  mode: single
+- id: mets_game_end_gemini
+  alias: Mets Game End - Gemini Notification
+  description: AI-generated push notification and TTS with final score
+  triggers:
+  - entity_id: sensor.mlb_new_york_mets
+    to: POST
+    from: IN
+    trigger: state
+  conditions: []
+  actions:
+  - data:
+      task_name: Mets Game End Announcement
+      instructions: 'Write a short announcement (1-2 sentences, no hashtags) for a
+        Mets fan about the final result. Final score: Mets {{ state_attr(''sensor.mlb_new_york_mets'',
+        ''team_score'') }}, {{ state_attr(''sensor.mlb_new_york_mets'', ''opponent_name'')
+        }} {{ state_attr(''sensor.mlb_new_york_mets'', ''opponent_score'') }}. {%
+        if state_attr(''sensor.mlb_new_york_mets'', ''team_score'') | int > state_attr(''sensor.mlb_new_york_mets'',
+        ''opponent_score'') | int %}The Mets won — be celebratory!{% else %}The Mets
+        lost — be sympathetic but encouraging.{% endif %}'
+      entity_id: ai_task.google_ai_task
+    response_variable: gemini_response
+    action: ai_task.generate_data
+  - data:
+      title: ⚾ Mets Final
+      message: '{{ gemini_response.data }}'
+    action: notify.mobile_app_joe_castagnas_iphone_14_max_2022
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.bedroom_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: '{{ gemini_response.data }}'
+- id: fifa_wc_kickoff_5min
+  alias: FIFA World Cup - Kickoff in 5 Minutes
+  description: Gemini notification + TTS 5 minutes before any World Cup game
+  triggers:
+  - value_template: '{% set events = state_attr(''sensor.fifa_world_cup_scoreboard'',
+      ''events'') %}{% if events and events | length > 0 %}{% set ns = namespace(found=false)
+      %}{% for e in events %}{% if e.status.type.state == ''pre'' %}{% set game_time
+      = as_datetime(e.date) %}{% set mins_away = ((game_time - now()).total_seconds()
+      / 60) | int %}{% if mins_away >= 4 and mins_away <= 6 %}{% set ns.found = true
+      %}{% endif %}{% endif %}{% endfor %}{{ ns.found }}{% else %}false{% endif %}'
+    trigger: template
+  conditions: []
+  actions:
+  - data:
+      instructions: '{% set events = state_attr(''sensor.fifa_world_cup_scoreboard'',
+        ''events'') %}{% set ns = namespace(game=''the upcoming match'') %}{% if events
+        %}{% for e in events %}{% if e.status.type.state == ''pre'' %}{% set ns.game
+        = e.name %}{% endif %}{% endfor %}{% endif %}Write a short exciting push notification
+        (1-2 sentences, no hashtags) for a soccer fan. The FIFA World Cup match {{
+        ns.game }} kicks off in 5 minutes!'
+      entity_id: ai_task.google_ai_task
+      task_name: World Cup Kickoff Alert
+    response_variable: gemini_response
+    action: ai_task.generate_data
+  - data:
+      title: ⚽ World Cup Kickoff in 5!
+      message: '{{ gemini_response.data }}'
+    action: notify.mobile_app_joe_castagnas_iphone_14_max_2022
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: '{{ gemini_response.data }}'
+  mode: single
+- id: fifa_wc_halftime
+  alias: FIFA World Cup - Halftime
+  description: Gemini notification + TTS when any World Cup game hits halftime
+  triggers:
+  - platform: template
+    value_template: '{% set events = state_attr(''sensor.fifa_world_cup_scoreboard'',
+      ''events'') %}{% if events and events | length > 0 %}{% set ns = namespace(found=false)
+      %}{% for e in events %}{% if e.status.type.description == ''Halftime'' %}{%
+      set ns.found = true %}{% endif %}{% endfor %}{{ ns.found }}{% else %}false{%
+      endif %}'
+  conditions: []
+  actions:
+  - data:
+      instructions: '{% set events = state_attr(''sensor.fifa_world_cup_scoreboard'',
+        ''events'') %}{% set ns = namespace(game=''the match'') %}{% if events %}{%
+        for e in events %}{% if e.status.type.description == ''Halftime'' %}{% set
+        ns.game = e.name %}{% endif %}{% endfor %}{% endif %}Write a short engaging
+        push notification (1-2 sentences, no hashtags) for a soccer fan. It''s halftime
+        in the FIFA World Cup match: {{ ns.game }}. Be engaging and get the fan hyped
+        for the second half!'
+      entity_id: ai_task.google_ai_task
+      task_name: World Cup Halftime Update
+    response_variable: gemini_response
+    action: ai_task.generate_data
+  - data:
+      title: ⚽ World Cup Halftime
+      message: '{{ gemini_response.data }}'
+    action: notify.mobile_app_joe_castagnas_iphone_14_max_2022
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.bedroom_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: '{{ gemini_response.data }}'
+  mode: single
+- id: fifa_wc_game_start
+  alias: FIFA World Cup - Game Start
+  description: Gemini notification + TTS when any World Cup game kicks off
+  triggers:
+  - platform: template
+    value_template: '{% set events = state_attr(''sensor.fifa_world_cup_scoreboard'',
+      ''events'') %}{% if events and events | length > 0 %}{% set ns = namespace(found=false)
+      %}{% for e in events %}{% if e.status.type.state == ''in'' and e.status.type.description
+      == ''In Progress'' and e.status.displayClock == ''0:00'' %}{% set ns.found =
+      true %}{% endif %}{% endfor %}{{ ns.found }}{% else %}false{% endif %}'
+  conditions: []
+  actions:
+  - data:
+      instructions: '{% set events = state_attr(''sensor.fifa_world_cup_scoreboard'',
+        ''events'') %}{% set ns = namespace(game=''the match'') %}{% if events %}{%
+        for e in events %}{% if e.status.type.state == ''in'' %}{% set ns.game = e.name
+        %}{% endif %}{% endfor %}{% endif %}Write a short exciting push notification
+        (1-2 sentences, no hashtags) announcing that the FIFA World Cup match {{ ns.game
+        }} has just kicked off! Make it electric!'
+      entity_id: ai_task.google_ai_task
+      task_name: World Cup Game Start Announcement
+    response_variable: gemini_response
+    action: ai_task.generate_data
+  - data:
+      title: ⚽ World Cup Kickoff!
+      message: '{{ gemini_response.data }}'
+    action: notify.mobile_app_joe_castagnas_iphone_14_max_2022
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.bedroom_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: '{{ gemini_response.data }}'
+  - action: tts.speak
+    target:
+      entity_id: tts.google_ai_tts
+    data:
+      media_player_entity_id: media_player.office_speaker
+      message: '{{ gemini_response.data }}'
+  mode: single
+- id: '1783814768837'
+  alias: Hallway Test
+  description: ''
+  triggers:
+  - trigger: light.turned_on
+    target:
+      device_id: 52047ae4e70394dd55456863f3698135
+    options:
+      behavior: each
+  conditions: []
+  actions:
+  - action: tts.speak
+    data:
+      media_player_entity_id: media_player.kitchen_speaker
+      message: 'The hallway is up and running! '
+    target:
+      entity_id: tts.google_translate_en_com
+  mode: single

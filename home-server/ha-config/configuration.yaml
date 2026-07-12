@@ -1,0 +1,55 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+http:
+  ssl_certificate: /ssl/fullchain.pem
+  ssl_key: /ssl/privkey.pem
+
+google_assistant:
+  project_id: homeassistant-joecastagna
+  service_account: !include homeassistant-joecastagna-c81e48d8cad1.json
+  report_state: true
+  expose_by_default: true
+  exposed_domains:
+    - light
+    - switch
+    - climate
+    - fan
+    - cover
+    - lock
+    - media_player
+    - vacuum
+    - scene
+    - script
+    - water_heater
+    - humidifier
+input_boolean:
+  im_awake:
+    name: I'm Awake
+    icon: mdi:coffee
+
+# The FIFA scoreboard sensor carries the full ESPN events payload as attributes
+# (>16KB), which the recorder can't store — exclude it to stop the warnings.
+# Live state/attributes still work for automations; only history is skipped.
+recorder:
+  exclude:
+    entities:
+      - sensor.fifa_world_cup_scoreboard
+
+# FIFA World Cup - ESPN REST sensor (tracks all games)
+rest:
+  - resource: "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard"
+    scan_interval: 60
+    sensor:
+      - name: "FIFA World Cup Scoreboard"
+        value_template: "{{ value_json.events | length }}"
+        json_attributes:
+          - events
