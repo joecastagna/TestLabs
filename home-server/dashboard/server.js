@@ -226,8 +226,13 @@ async function piholeSetBlocking(blocking, timerSeconds) {
 async function getStatus() {
   const results = {};
   await Promise.all(HOSTS.map(async (h) => {
-    const ping = await pingHost(h.ip);
-    const httpCheck = h.port ? await checkHttp(h.ip, h.port, h.https) : null;
+    // Run concurrently, not sequentially — when a host is actually down,
+    // waiting on the ping timeout before even starting the HTTP check
+    // doubled how long a single dead host could hold up the whole response.
+    const [ping, httpCheck] = await Promise.all([
+      pingHost(h.ip),
+      h.port ? checkHttp(h.ip, h.port, h.https) : Promise.resolve(null),
+    ]);
     results[h.id] = { ...h, ping, http: httpCheck };
   }));
   results.containers = await getDockerStatus();

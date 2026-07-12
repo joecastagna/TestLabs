@@ -216,6 +216,18 @@
     .paletteHint, .uptimeval { display: none; }
   }
 
+  /* Below ~480px (small phones) the wordmark + status text + clock can
+     still overflow the header row even with the hints above hidden —
+     shrink type and let the status text ellipsize instead of forcing
+     horizontal scroll. */
+  @media (max-width: 480px) {
+    .consolebar { gap: 10px; padding: 12px 14px; }
+    .wordmark { font-size: 13px; }
+    .systemstate { font-size: 10px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .clockblock { gap: 8px; }
+    .clock { font-size: 13px; }
+  }
+
   /* ---------- section headers ---------- */
 
   .sectionHead {
@@ -953,7 +965,7 @@
       }
       badge.innerHTML =
         '<span class="led ' + (up ? 'good' : 'bad') + '" role="img" aria-label="' + c.name + ' status: ' + (up ? 'running' : 'stopped') + '"></span>' +
-        '<div class="cbadge-info"><div class="cbadge-name mono">' + c.name + '</div><div class="cbadge-status">' + (c.status || c.state) + '</div></div>' +
+        '<div class="cbadge-info"><div class="cbadge-name mono">' + c.name + '</div><div class="cbadge-status">' + (c.status || c.state) + (c.ports ? ' · ' + c.ports : '') + '</div></div>' +
         (actions ? '<div class="cbadge-actions">' + actions + '</div>' : '');
       grid.appendChild(badge);
     });
