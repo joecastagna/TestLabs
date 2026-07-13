@@ -1,0 +1,19 @@
+---
+- SSH Access:
+    - Ubuntu Server:
+        - abbr: UB
+          href: ssh://joecastagna@192.168.0.186
+    - Home Assistant:
+        - abbr: HA
+          href: ssh://root@192.168.0.121
+    - iMac:
+        - abbr: iM
+          href: ssh://joecastagna@192.168.0.89
+
+- Reference:
+    - Startup Guide:
+        - abbr: SG
+          href: https://github.com/joecastagna/TestLabs/blob/main/home-server/docs/startup-guide.md
+    - Repo:
+        - abbr: GH
+          href: https://github.com/joecastagna/TestLabs

@@ -1,0 +1,84 @@
+---
+# Widget URLs use raw IPs on purpose — they're fetched server-side by the
+# Homepage container, whose own DNS/mDNS visibility can't be assumed. The
+# href links use .local (mDNS, published via Avahi on the Ubuntu server —
+# see CLAUDE.md "Local names (mDNS/.local)") since those open in the
+# *browser*, which resolves mDNS natively on macOS/iOS.
+- Home Network:
+    - Home Assistant:
+        href: https://homeassistant.local:8123
+        description: Home automation
+        icon: home-assistant
+        widget:
+          type: homeassistant
+          url: https://192.168.0.121:8123
+          key: '{{HOMEPAGE_VAR_HA_TOKEN}}'
+
+    - Pi-hole:
+        href: http://pihole.local:8080/admin/
+        description: LAN DNS + ad blocking
+        icon: pi-hole
+        server: local
+        container: pihole
+        widget:
+          type: pihole
+          version: 6
+          url: http://192.168.0.186:8080
+          key: '{{HOMEPAGE_VAR_PIHOLE_PASSWORD}}'
+
+    - Nginx Proxy Manager:
+        href: http://npm.local:81
+        description: Reverse proxy & SSL
+        icon: nginx-proxy-manager
+        server: local
+        container: nginx-proxy-manager
+
+    - Portainer:
+        href: http://portainer.local:9000
+        description: Container management
+        icon: portainer
+        server: local
+        container: portainer
+        # Status widget disabled until an API access token exists — an empty
+        # `key:` just spams 401s in the logs. To enable: Portainer UI → user
+        # menu → "My account" → Access tokens → add token, put it in
+        # ~/apps/homepage/.env as PORTAINER_KEY=..., add
+        # HOMEPAGE_VAR_PORTAINER_KEY to docker-compose.yml, then restore:
+        # widget:
+        #   type: portainer
+        #   url: http://192.168.0.186:9000
+        #   env: 2
+        #   key: '{{HOMEPAGE_VAR_PORTAINER_KEY}}'
+
+    - Memos:
+        href: http://memos.local:5230
+        description: Micro-notes
+        icon: memos
+        server: local
+        container: memos
+
+    - Homepage:
+        href: http://homepage.local:3001
+        description: This start page
+        icon: homepage
+        server: local
+        container: homepage
+
+- Dashboards:
+    - MyDash:
+        href: http://dashboard.local:3000
+        description: Custom command center (container name home-dashboard)
+        icon: mdi-monitor-dashboard
+        server: local
+        container: home-dashboard
+
+    - Joe's Dashboard:
+        href: https://joecastagna.me/dashb/
+        description: Personal dashboard
+        icon: mdi-view-dashboard
+
+- Remote Access:
+    - Home Assistant (DuckDNS):
+        href: https://joecastagna-ha.duckdns.org:8123
+        description: HA external access
+        icon: duckdns

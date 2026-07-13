@@ -24,6 +24,8 @@ const HOSTS = [
   { id: 'npm', name: 'Nginx Proxy Manager', ip: '192.168.0.186', port: 81, https: false },
   { id: 'pihole', name: 'Pi-hole', ip: '192.168.0.186', port: 8080, https: false },
   { id: 'portainer', name: 'Portainer', ip: '192.168.0.186', port: 9000, https: false },
+  { id: 'homepage', name: 'Homepage', ip: '192.168.0.186', port: 3001, https: false },
+  { id: 'memos', name: 'Memos', ip: '192.168.0.186', port: 5230, https: false },
 ];
 
 // ---------- system telemetry ----------
@@ -89,13 +91,14 @@ function checkHttp(ip, port, useHttps) {
 
 function dockerRequest(method, dockerPath) {
   return new Promise((resolve, reject) => {
-    const opts = { socketPath: '/var/run/docker.sock', path: dockerPath, method };
+    const opts = { socketPath: '/var/run/docker.sock', path: dockerPath, method, timeout: 5000 };
     const req = http.request(opts, (res) => {
       let data = '';
       res.on('data', (chunk) => data += chunk);
       res.on('end', () => resolve({ status: res.statusCode, body: data }));
     });
     req.on('error', reject);
+    req.on('timeout', () => { req.destroy(new Error('docker socket request timed out')); });
     req.end();
   });
 }
@@ -179,12 +182,15 @@ function streamContainerLogs(name, res) {
 let piholeSid = null;
 let piholeSidExpiry = 0;
 
+const PIHOLE_TIMEOUT_MS = 3000;
+
 async function piholeAuth() {
   if (piholeSid && Date.now() < piholeSidExpiry) return piholeSid;
   const res = await fetch(`${PIHOLE_BASE}/api/auth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: PIHOLE_PASSWORD }),
+    signal: AbortSignal.timeout(PIHOLE_TIMEOUT_MS),
   });
   const data = await res.json();
   if (!data.session || !data.session.valid) throw new Error('pihole auth failed');
@@ -195,7 +201,10 @@ async function piholeAuth() {
 
 async function piholeGetBlocking() {
   const sid = await piholeAuth();
-  const res = await fetch(`${PIHOLE_BASE}/api/dns/blocking`, { headers: { sid } });
+  const res = await fetch(`${PIHOLE_BASE}/api/dns/blocking`, {
+    headers: { sid },
+    signal: AbortSignal.timeout(PIHOLE_TIMEOUT_MS),
+  });
   return res.json();
 }
 
@@ -207,6 +216,7 @@ async function piholeSetBlocking(blocking, timerSeconds) {
     method: 'POST',
     headers: { sid, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(PIHOLE_TIMEOUT_MS),
   });
   return res.json();
 }
@@ -216,8 +226,13 @@ async function piholeSetBlocking(blocking, timerSeconds) {
 async function getStatus() {
   const results = {};
   await Promise.all(HOSTS.map(async (h) => {
-    const ping = await pingHost(h.ip);
-    const httpCheck = h.port ? await checkHttp(h.ip, h.port, h.https) : null;
+    // Run concurrently, not sequentially — when a host is actually down,
+    // waiting on the ping timeout before even starting the HTTP check
+    // doubled how long a single dead host could hold up the whole response.
+    const [ping, httpCheck] = await Promise.all([
+      pingHost(h.ip),
+      h.port ? checkHttp(h.ip, h.port, h.https) : Promise.resolve(null),
+    ]);
     results[h.id] = { ...h, ping, http: httpCheck };
   }));
   results.containers = await getDockerStatus();
@@ -303,7 +318,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    // No validators (ETag/Last-Modified) were being sent, so some browsers
+    // could serve a stale cached copy of the page after a deploy instead of
+    // refetching — same reasoning /api/status already applies below.
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
     res.end(fs.readFileSync(path.join(__dirname, 'public', 'index.html')));
     return;
   }

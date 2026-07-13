@@ -1,0 +1,15 @@
+title: Home Server
+favicon: https://joecastagna.me/favicon.ico
+theme: dark
+color: slate
+headerStyle: clean
+layout:
+  Home Network:
+    style: row
+    columns: 3
+  Dashboards:
+    style: row
+    columns: 2
+  Remote Access:
+    style: row
+    columns: 1
