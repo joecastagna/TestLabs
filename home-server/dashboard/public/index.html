@@ -725,7 +725,7 @@
   </div>
   <div class="containerGrid" id="containerGrid"><div class="loadingNote mono">loading containers…</div></div>
 
-  <footer class="pagefoot">mydash · served from 192.168.0.186 · dashboard.home</footer>
+  <footer class="pagefoot">mydash · served from 192.168.0.186 · dashboard.local</footer>
 </div>
 
 <div class="logsDrawer" id="logsDrawer">
@@ -749,19 +749,22 @@
 (function () {
   'use strict';
 
+  // "home" field name kept for historical reasons (was the .home DNS name);
+  // as of July 2026 these are mDNS (.local) names, published via Avahi on
+  // the Ubuntu server — see CLAUDE.md "Local names (mDNS/.local)".
   var SERVICES = [
     { id: 'ha', u: 'U1', name: 'Home Assistant', desc: 'Smart home core',
-      home: 'https://ha.home:8123', ip: 'https://192.168.0.121:8123', statusKey: 'ha' },
+      home: 'https://homeassistant.local:8123', ip: 'https://192.168.0.121:8123', statusKey: 'ha' },
     { id: 'npm', u: 'U2', name: 'Nginx Proxy Manager', desc: 'Reverse proxy · routing · SSL',
-      home: 'http://npm.home:81', ip: 'http://192.168.0.186:81', statusKey: 'npm' },
+      home: 'http://npm.local:81', ip: 'http://192.168.0.186:81', statusKey: 'npm' },
     { id: 'portainer', u: 'U3', name: 'Portainer', desc: 'Containers · images · volumes',
-      home: 'http://portainer.home:9000', ip: 'http://192.168.0.186:9000', statusKey: 'portainer' },
+      home: 'http://portainer.local:9000', ip: 'http://192.168.0.186:9000', statusKey: 'portainer' },
     { id: 'pihole', u: 'U4', name: 'Pi-hole', desc: 'Network-wide DNS + ad blocking',
-      home: 'http://pihole.home:8080/admin/', ip: 'http://192.168.0.186:8080/admin/', statusKey: 'pihole', pihole: true },
+      home: 'http://pihole.local:8080/admin/', ip: 'http://192.168.0.186:8080/admin/', statusKey: 'pihole', pihole: true },
     { id: 'homepage', u: 'U5', name: 'Homepage', desc: 'Lab start page · service links',
-      home: 'http://homepage.home', ip: 'http://192.168.0.186:3001', statusKey: 'homepage' },
+      home: 'http://homepage.local:3001', ip: 'http://192.168.0.186:3001', statusKey: 'homepage' },
     { id: 'memos', u: 'U6', name: 'Memos', desc: 'Self-hosted micro-notes',
-      home: 'http://memos.home:5230', ip: 'http://192.168.0.186:5230', statusKey: 'memos' },
+      home: 'http://memos.local:5230', ip: 'http://192.168.0.186:5230', statusKey: 'memos' },
   ];
 
   var TELEMETRY = [

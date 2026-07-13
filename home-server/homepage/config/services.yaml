@@ -1,10 +1,12 @@
 ---
 # Widget URLs use raw IPs on purpose — they're fetched server-side by the
-# Homepage container, whose DNS may not go through Pi-hole. The href links
-# use .home names since those open in the *browser*, which does.
+# Homepage container, whose own DNS/mDNS visibility can't be assumed. The
+# href links use .local (mDNS, published via Avahi on the Ubuntu server —
+# see CLAUDE.md "Local names (mDNS/.local)") since those open in the
+# *browser*, which resolves mDNS natively on macOS/iOS.
 - Home Network:
     - Home Assistant:
-        href: https://ha.home:8123
+        href: https://homeassistant.local:8123
         description: Home automation
         icon: home-assistant
         widget:
@@ -13,7 +15,7 @@
           key: '{{HOMEPAGE_VAR_HA_TOKEN}}'
 
     - Pi-hole:
-        href: http://pihole.home:8080/admin/
+        href: http://pihole.local:8080/admin/
         description: LAN DNS + ad blocking
         icon: pi-hole
         server: local
@@ -25,14 +27,14 @@
           key: '{{HOMEPAGE_VAR_PIHOLE_PASSWORD}}'
 
     - Nginx Proxy Manager:
-        href: http://npm.home
+        href: http://npm.local:81
         description: Reverse proxy & SSL
         icon: nginx-proxy-manager
         server: local
         container: nginx-proxy-manager
 
     - Portainer:
-        href: http://portainer.home
+        href: http://portainer.local:9000
         description: Container management
         icon: portainer
         server: local
@@ -49,14 +51,14 @@
         #   key: '{{HOMEPAGE_VAR_PORTAINER_KEY}}'
 
     - Memos:
-        href: http://memos.home:5230
+        href: http://memos.local:5230
         description: Micro-notes
         icon: memos
         server: local
         container: memos
 
     - Homepage:
-        href: http://homepage.home
+        href: http://homepage.local:3001
         description: This start page
         icon: homepage
         server: local
@@ -64,7 +66,7 @@
 
 - Dashboards:
     - MyDash:
-        href: http://dashboard.home
+        href: http://dashboard.local:3000
         description: Custom command center (container name home-dashboard)
         icon: mdi-monitor-dashboard
         server: local

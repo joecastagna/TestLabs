@@ -12,11 +12,14 @@ configs — it is not automatically synced, see "Keeping this in sync" below.
   scenes, scripts). Secrets (`secrets.yaml`, `.storage/`, service-account JSON) are
   intentionally excluded — this repo is public.
 - `dashboard/` — mirror of `~/apps/home-dashboard` on the Ubuntu server: a Node.js command
-  center (telemetry, service launcher with DNS fallback, Docker controls, Pi-hole pause,
+  center (telemetry, service launcher with mDNS fallback, Docker controls, Pi-hole pause,
   live log stream, command palette). See "Working with the dashboard" below.
-- `pihole/` — docker-compose for the local DNS resolver (see "Pi-hole / local DNS" below).
-  Only the compose file is mirrored; `etc-pihole/` and `etc-dnsmasq.d/` (live state:
-  gravity DB, query log) stay server-side only, never committed.
+- `pihole/` — docker-compose for the network-wide ad blocker (see "Pi-hole / ad blocking"
+  below). Only the compose file is mirrored; `etc-pihole/` and `etc-dnsmasq.d/` (live
+  state: gravity DB, query log) stay server-side only, never committed.
+- No directory for local name resolution — that's mDNS (Avahi), config lives entirely in
+  systemd unit files on the Ubuntu server, nothing to mirror (see "Local names
+  (mDNS/.local)" below).
 - `homepage/` — docker-compose + config for [Homepage](https://gethomepage.dev), a static
   start page linking out to the other services (see "Homepage (start page)" below).
 - `memos/` — docker-compose for [Memos](https://usememos.com), a self-hosted micro-notes
@@ -70,10 +73,12 @@ and `dashboard/server.js`). Source lives in `dashboard/`.
 **UI rebranded to "MyDash" (July 2026)** — this is branding only: the `<title>`, header
 wordmark, and footer text changed from "HOME/OPS" to "MyDash"/"MYDASH". The container name
 (`home-dashboard`), the compose service name, the directory (`dashboard/` here,
-`~/apps/home-dashboard/` on the server), the `CONTROLLABLE` allowlist entry, and the
-`dashboard.home` DNS name are all **unchanged** and still say `home-dashboard`. If you're
-scripting or grepping for the dashboard, keep using `home-dashboard`; "MyDash" is only
-what a user sees in the browser.
+`~/apps/home-dashboard/` on the server), and the `CONTROLLABLE` allowlist entry are all
+**unchanged** and still say `home-dashboard`. If you're scripting or grepping for the
+dashboard, keep using `home-dashboard`; "MyDash" is only what a user sees in the browser.
+(The DNS/mDNS name it's reached at is a separate thing again — see "Local names
+(mDNS/.local)" below; it moved from `dashboard.home` to `dashboard.local` in the same July
+2026 change that retired `.home` entirely.)
 
 The services rack now also has tiles for Homepage and Memos, added the same way as the
 original four (HA, NPM, Portainer, Pi-hole) — see "Homepage" and "Memos" below for those
@@ -118,20 +123,28 @@ blocking status; sessions are cached and refreshed automatically.
 (8-byte header: stream type + big-endian payload size) manually — there's no dependency
 for this, just a small stateful parser in `server.js`.
 
-**Smart fallback routing**: on page load, the frontend probes each `.home` name with a
-600ms-timeout `fetch(..., {mode:'no-cors'})` against the client's *own* DNS resolver (not
-the server's) — a rejected/timed-out promise means that browser can't resolve or reach the
-name, and the UI swaps that service's primary link to the raw IP:port and shows an "IP
-FALLBACK" badge. This is why it can show fallback active on one device while working fine
-on another — it reflects whatever DNS *that specific browser* is using, which matters
-while devices are still catching up to the Pi-hole DHCP change (see below).
+**Smart fallback routing**: on page load, the frontend probes each service's `.local`
+(mDNS) name with a 600ms-timeout `fetch(..., {mode:'no-cors'})` against the client's *own*
+resolver (not the server's) — a rejected/timed-out promise means that browser can't
+resolve or reach the name, and the UI swaps that service's primary link to the raw IP:port
+and shows an "IP FALLBACK" badge. This is why it can show fallback active on one device
+while working fine on another — it reflects whatever that specific browser/OS's mDNS
+support looks like (see "Local names (mDNS/.local)" below — this matters most for Android,
+which has patchier `.local` support than macOS/iOS). Also worth knowing: this same probe
+briefly showed a false fallback for the Home Assistant tile in testing — not a DNS
+problem, HA's self-signed HTTPS cert makes any `fetch()` from a browser profile that
+hasn't already manually accepted that cert warning fail near-instantly, which reads
+identically to a DNS failure from this probe's perspective.
 
-## Pi-hole / local DNS
+## Pi-hole / ad blocking
 
-Runs on the Ubuntu server (`~/apps/pihole`), added July 2026 so LAN hostnames
-(`dashboard.home`, `ha.home`, etc.) resolve on every device, not just the MacBook's
-`/etc/hosts`. Admin UI: `http://192.168.0.186:8080/admin/` (password in
-`secrets.local.md`).
+Runs on the Ubuntu server (`~/apps/pihole`), added July 2026. Admin UI:
+`http://192.168.0.186:8080/admin/` (password in `secrets.local.md`).
+
+**As of July 2026, Pi-hole's job is ad blocking only** — it no longer serves local DNS
+records for `.home` names. It used to do both (see "Local names (mDNS/.local)" below for
+why that changed and what replaced it), but every device on the LAN should still point at
+it as their DNS server for the blocking to apply.
 
 - **Port 8080 for admin UI, not 80** — Nginx Proxy Manager already owns 80/81/443 on this
   host.
@@ -143,29 +156,105 @@ Runs on the Ubuntu server (`~/apps/pihole`), added July 2026 so LAN hostnames
   networking Pi-hole misjudges LAN client IPs as "non-local" and silently drops their
   queries otherwise. This is the #1 "Pi-hole works from the host but not other devices"
   Docker gotcha.
-- Local records are set via the Pi-hole v6 REST API (`dns.hosts` config key), not the old
-  `pihole -a -addcustomdns` CLI (removed in v6). Editing `pihole.toml` directly while FTL
-  is running is discouraged; use the API or the admin UI (Settings → Local DNS Records).
 
 **Router DHCP is pointed at it (done July 2026)**: TP-Link router (Advanced → Network →
 DHCP Server) has Primary DNS `192.168.0.186`, Secondary DNS `1.1.1.1` (Cloudflare
-fallback — if the Ubuntu server is down, devices still get normal internet DNS, just not
-`.home` names or ad-blocking until it's back). Devices pick this up on their next DHCP
-lease renewal (up to ~2 hours), or immediately if you toggle Wi-Fi off/on.
+fallback — if the Ubuntu server is down, devices still get normal internet DNS, just
+without ad blocking until it's back). Devices pick this up on their next DHCP lease
+renewal (up to ~2 hours), or immediately if you toggle Wi-Fi off/on. **This only covers
+IPv4** — see the IPv6 note below, which is what actually broke `.home` names and is why
+they were retired in favor of mDNS.
 
-Current local DNS records (`dns.hosts`): `dashboard.home`, `ha.home`, `npm.home`,
-`portainer.home`, `pihole.home`, `homepage.home`, `memos.home` — all mirrored with their
-real IP:port in [`docs/startup-guide.md`](docs/startup-guide.md) and on the dashboard's
-"Local DNS" panel. Always keep both forms documented side by side: the `.home` name is
-convenient but depends on Pi-hole being up; the IP:port always works.
+## Local names (mDNS/.local)
 
-Records are added by running `pihole-FTL --config dns.hosts '[...]'` inside the `pihole`
-container — it takes the **full array**, not an append, so re-send every existing entry
-plus the new one each time:
+**Replaced the old Pi-hole-DNS-record `.home` scheme entirely, July 2026.** Every service
+that used to be `name.home` is now `name.local`, resolved via mDNS (Avahi/Bonjour) instead
+of a central DNS server. If you're looking for how `dashboard.home` used to work, it
+doesn't anymore — this section is what replaced it, and the "why" is worth understanding
+before touching any of this again.
+
+**Why the old scheme broke**: the router hands out two *separate* DNS configurations that
+don't agree — IPv4 via DHCP (correctly pointed at Pi-hole) and IPv6 via Router
+Advertisement/RDNSS (still pointing at the ISP's own public IPv6 resolvers, a completely
+independent mechanism unaffected by the IPv4 DHCP setting). Every modern device does IPv6
+by default and gets both. When an OS resolver has multiple nameservers, it uses the first
+one that gives a *definitive* answer, success or fail — and the ISP's IPv6 resolver
+answers `.home` queries immediately and authoritatively with "no such domain" (it's a real
+public TLD-adjacent resolver, it's just never heard of your Pi-hole records), so devices
+never even got as far as asking Pi-hole. Normal websites still resolved fine through the
+same IPv6 server, which is exactly why this was so confusing to diagnose — it looked like
+`.home` "just didn't work" with no obvious pattern, on both Joe's phone and the iMac.
+
+**Why mDNS instead of fixing the router**: mDNS isn't a DNS resolver that can get shadowed
+by resolver precedence — it's a separate multicast protocol, natively supported by
+macOS/iOS with zero client configuration, so this class of bug structurally can't recur.
+The alternative (find and disable IPv6 RA/RDNSS on the TP-Link router) was considered and
+rejected for now — unverified whether the router firmware even exposes that granular a
+toggle, versus mDNS being knowable-to-work today.
+
+**How it's set up** (Ubuntu server, `192.168.0.186`, hostname `cascla-u-serv`):
 ```bash
-docker exec pihole pihole-FTL --config dns.hosts '["192.168.0.186 dashboard.home", "192.168.0.186 npm.home", "192.168.0.186 portainer.home", "192.168.0.186 pihole.home", "192.168.0.121 ha.home", "192.168.0.186 homepage.home", "192.168.0.186 memos.home"]'
+sudo apt-get install -y avahi-daemon avahi-utils
 ```
-(run via `ssh joecastagna@192.168.0.186 '...'`, quoting carefully for the extra shell hop)
+- **`allow-interfaces=enp0s1`** in `/etc/avahi/avahi-daemon.conf` — without this, Avahi
+  also announces on `docker0` and any docker-compose bridge networks, and its own base
+  hostname (`cascla-u-serv.local`) resolved to a *Docker bridge IP* (`172.21.0.1`) instead
+  of the real LAN IP until this was set. Always check this first if `.local` resolves to
+  something that looks like a container-internal address.
+- **Per-service aliases** are published via `avahi-publish -a`, one process per
+  name+address-family, managed by two systemd template units:
+  `/etc/systemd/system/avahi-alias@.service` (IPv4, `avahi-publish -a -R %i.local
+  192.168.0.186`) and `avahi-alias-v6@.service` (IPv6 ULA,
+  `fdd9:2d63:9e1c:6eab:80b3:2fff:fec6:6511` — the stable ULA address on `enp0s1`, not the
+  global/ISP-delegated one, since that can change with prefix re-delegation). `-R`
+  (no-reverse) matters here: six different names all point at the same IP, and without
+  `-R` each `avahi-publish` process fights the others over who owns the reverse PTR record
+  for that address.
+- **Both address families are required, not optional** — publishing only the IPv4 (A)
+  record caused an ~9 second hang on first load in testing (confirmed via
+  `performance.getEntriesByType('navigation')[0].domainLookupStart/End`, and reproduced
+  with plain `curl` too — `curl -4` returned instantly, no flag was ~9s). The browser/OS
+  does a dual-stack (A + AAAA) lookup and some resolvers wait out a real timeout on the
+  *missing* AAAA before falling back to the working A record, rather than failing fast.
+  Publishing an AAAA (IPv6) record for every alias fixed it — DNS lookup dropped to
+  0–2ms. If you add a new alias later and it feels slow to load the first time, this is
+  almost certainly why — check both `avahi-alias@<name>` and `avahi-alias-v6@<name>` are
+  enabled and active.
+- **To add a new alias**: `sudo systemctl enable --now avahi-alias@<name>
+  avahi-alias-v6@<name>` (both, per above) — no daemon-reload needed for a new instance of
+  an existing template.
+
+**Current names** — every one of these needs its **explicit port**, since none of them go
+through Nginx Proxy Manager anymore (see the NPM note below):
+
+| Name | Port |
+|---|---|
+| `dashboard.local` | 3000 |
+| `homepage.local` | 3001 |
+| `memos.local` | 5230 |
+| `portainer.local` | 9000 |
+| `npm.local` | 81 |
+| `pihole.local` | 8080/admin/ |
+
+**`homeassistant.local` needed zero setup** — Home Assistant OS publishes its own mDNS
+record natively (this is a standard, well-known HAOS feature). It resolves and serves
+HTTPS correctly with no changes on the HA server, which this repo has no working SSH
+access to anyway (see "Hosts" above).
+
+**Nginx Proxy Manager is now unused for local naming.** It previously proxied
+`dashboard.home` and `homepage.home` on port 80 so those two didn't need a port in the
+URL — that convenience is gone under the `.local` scheme (every name needs its port now,
+see table above), a deliberate tradeoff to avoid depending on NPM admin credentials, which
+weren't available when this was set up. NPM's two old proxy hosts for those names are now
+orphaned dead config — harmless, but worth deleting next time you're in the NPM admin UI
+(`http://npm.local:81`). If NPM credentials become available later, re-adding proxy hosts
+for `dashboard.local`/`homepage.local` → their ports would restore the no-port
+convenience for just those two, without touching anything else here.
+
+**Known limitation**: Android's mDNS/`.local` support is historically inconsistent across
+versions/OEMs, unlike macOS/iOS's native zero-config support. Not an issue for any current
+device on this LAN, but worth knowing if an Android device or guest ever needs these
+names.
 
 ## Homepage (start page)
 
@@ -189,25 +278,29 @@ source of truth, same as the dashboard.
   `docker compose up -d` (most Homepage config is hot-reloaded, no rebuild needed).
 - **Pi-hole widget** reads `PIHOLE_PASSWORD` via `HOMEPAGE_VAR_PIHOLE_PASSWORD` (same
   `.env` file/value as `pihole/` and `dashboard/` already use on the server).
-- NPM and Portainer service cards don't yet have `container:` mappings in
-  `services.yaml` — fill those in with the real container names on the server if you want
-  live status for them too.
+- All service cards now have `container:` mappings in `services.yaml`, including NPM and
+  Portainer (their status widget is separately disabled/pending API keys — see the
+  Portainer entry's comment in the file).
 - **`HOMEPAGE_ALLOWED_HOSTS` is required**, or every request gets rejected with "Host
   validation failed" (a DNS-rebinding protection added in newer Homepage versions — it
   allowlists incoming `Host` headers, not just IP reachability). Discovered when accessing
   Homepage by raw IP:port from a phone failed even though `curl` from the Ubuntu server
   itself returned 200 (the health-check request's `Host` header happened to already match,
-  masking the issue). Fixed by setting it explicitly in `docker-compose.yml`:
+  masking the issue). Hit **again** when `.home` was retired for `.local` (July 2026) — the
+  new hostname needed adding too, same symptom. Whenever a new way of reaching Homepage is
+  added, add it here or it rejects with this error:
   ```yaml
   environment:
-    HOMEPAGE_ALLOWED_HOSTS: "192.168.0.186:3001,homepage.home,homepage.home:3001"
+    HOMEPAGE_ALLOWED_HOSTS: "homepage.local:3001,192.168.0.186:3001"
   ```
-  Add any new host/port combo you expect to access Homepage from to this comma-separated
-  list — it does not wildcard by default (though `"*"` is supported if you'd rather trade
-  the DNS-rebinding protection for convenience on this LAN-only service).
-- NPM proxy host (`homepage.home` → `192.168.0.186:3001`) and the Pi-hole local DNS record
-  for `homepage.home` are both done — `homepage.home` resolves and loads on port 80
-  (no `:3001` needed), same as `dashboard.home`.
+  It does not wildcard by default (though `"*"` is supported if you'd rather trade the
+  DNS-rebinding protection for convenience on this LAN-only service).
+- **Docker socket permissions**: the socket is `root:docker` (GID `983` on this host, not
+  `joecastagna`'s primary group) at `660` — the container must run with that group
+  (`PGID: 983` in `docker-compose.yml`) or every Docker status lookup fails silently with
+  `EACCES` in the logs, and every service card shows no status at all.
+- **URL**: `http://homepage.local:3001` — see "Local names (mDNS/.local)" above for why
+  it's `.local` now, not `.home`, and why it needs the port (no NPM proxy).
 
 ## Memos
 
@@ -227,13 +320,8 @@ direction as the dashboard and Homepage.
   dashboard, 3001 Homepage, 80/81/443 NPM, 9000 Portainer, 8080 Pi-hole admin, 53 DNS).
 - **Data volume**: `./data:/var/opt/memos`, bind-mounted, same pattern as Homepage's
   `./config`.
-- **Pi-hole DNS record exists** (`memos.home` → `192.168.0.186`), but **no NPM proxy host
-  yet** — unlike Homepage/dashboard, `memos.home` currently only works with an explicit
-  port: `http://memos.home:5230`, not a clean `http://memos.home`. Setting up the NPM
-  proxy host needs NPM admin UI access (`http://192.168.0.186:81`); wasn't done because no
-  admin credentials were available in the deploying session. To finish: add a proxy host
-  for `memos.home` → `192.168.0.186:5230`, same pattern as the existing `homepage.home`
-  and `dashboard.home` entries.
+- **URL**: `http://memos.local:5230` — see "Local names (mDNS/.local)" above; needs the
+  port like every other `.local` name now, no NPM involved.
 - **`docker.sock` not mounted** — Memos doesn't need Docker awareness, unlike Homepage's
   read-only mount for its container-status widget.
 
@@ -242,6 +330,13 @@ direction as the dashboard and Homepage.
 - Spectrum TV channel tuning was abandoned (July 2026) — don't revive it, it's a dead end.
 - `media_player.living_room` is a ghost Cast group; delete from the Google Home app.
 - HA MCP integration enabled but untested.
+- NPM has two orphaned proxy hosts (`dashboard.home`, `homepage.home`) left over from the
+  `.home` → `.local` migration — harmless, but worth deleting next time you're logged into
+  the NPM admin UI (`http://npm.local:81`).
+- The router's IPv6-DNS-bypasses-Pi-hole issue (see "Local names (mDNS/.local)") was never
+  fixed at the router level — mDNS sidesteps it for the services documented here, but it'd
+  still affect anything else that relies on Pi-hole's DNS overrides specifically over IPv6
+  in the future.
 
 ## Keeping this in sync
 

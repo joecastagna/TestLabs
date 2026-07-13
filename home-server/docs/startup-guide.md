@@ -4,14 +4,14 @@
 
 | Resource | Local name | Direct IP:port |
 |---|---|---|
-| **Home Dashboard** | http://dashboard.home | http://192.168.0.186:3000 |
-| **Home Assistant** | https://ha.home:8123 | https://192.168.0.121:8123 |
+| **Home Dashboard (MyDash)** | http://dashboard.local:3000 | http://192.168.0.186:3000 |
+| **Home Assistant** | https://homeassistant.local:8123 | https://192.168.0.121:8123 |
 | **HA (DuckDNS, remote)** | — | https://joecastagna-ha.duckdns.org:8123 |
-| **Portainer** | http://portainer.home | http://192.168.0.186:9000 |
-| **Nginx Proxy Manager** | http://npm.home | http://192.168.0.186:81 |
-| **Pi-hole Admin** | http://pihole.home:8080/admin/ | http://192.168.0.186:8080/admin/ |
-| **Homepage** | http://homepage.home | http://192.168.0.186:3001 |
-| **Memos** | http://memos.home:5230 | http://192.168.0.186:5230 |
+| **Portainer** | http://portainer.local:9000 | http://192.168.0.186:9000 |
+| **Nginx Proxy Manager** | http://npm.local:81 | http://192.168.0.186:81 |
+| **Pi-hole Admin** | http://pihole.local:8080/admin/ | http://192.168.0.186:8080/admin/ |
+| **Homepage** | http://homepage.local:3001 | http://192.168.0.186:3001 |
+| **Memos** | http://memos.local:5230 | http://192.168.0.186:5230 |
 
 | SSH | Command |
 |---|---|
@@ -19,24 +19,30 @@
 | **Ubuntu Server** | `ssh joecastagna@192.168.0.186` |
 | **iMac** | `ssh joecastagna@192.168.0.89` |
 
-The `.home` names only resolve once a device has picked up Pi-hole as its DNS server (see
-"Local DNS (Pi-hole)" below) — the IP:port column always works regardless, so keep both
-handy rather than relying on the name alone.
+**As of July 2026, all local names are `.local` (mDNS), not `.home` (Pi-hole DNS
+records) — the whole `.home` scheme was retired.** See "Local names (mDNS/.local)" below
+for why and how. `.local` names work natively with zero client config on macOS/iOS;
+the IP:port column always works regardless as a fallback and on other platforms.
 
 ## Network Map
 
 ```
 MacBook (you) ── LAN ── iMac (192.168.0.89, UTM host)
                            ├── Ubuntu VM (192.168.0.186) ── Docker
-                           │     ├── home-dashboard (port 3000, proxied via NPM on :80)
-                           │     ├── nginx-proxy-manager (ports 80/81/443)
+                           │     ├── home-dashboard (port 3000)
+                           │     ├── nginx-proxy-manager (ports 80/81/443 — no longer
+                           │     │     used for local naming, see mDNS section below)
                            │     ├── portainer (port 9000)
-                           │     ├── pihole (DNS :53, admin UI :8080)
-                           │     ├── homepage (port 3001, proxied via NPM on :80)
-                           │     └── memos (port 5230, no NPM proxy yet)
+                           │     ├── pihole (DNS :53, admin UI :8080 — ad blocking only)
+                           │     ├── homepage (port 3001)
+                           │     ├── memos (port 5230)
+                           │     └── avahi-daemon (host-level, not Dockerized — mDNS
+                           │           for all of the above, see below)
                            └── HA OS VM (192.168.0.121:8123) ── Home Assistant
+                                 (publishes its own mDNS record, homeassistant.local)
 
-Router DHCP → Pi-hole (192.168.0.186) as primary DNS, 1.1.1.1 as fallback
+Router DHCP → Pi-hole (192.168.0.186) as primary DNS, 1.1.1.1 as fallback (IPv4 only —
+ad blocking only now, not local names; see "Local names (mDNS/.local)")
 ```
 
 ## SSH Keys & Auth
@@ -80,8 +86,9 @@ Note: From inside the HA SSH add-on, use `172.30.32.1:8123` (internal supervisor
 - **hass-cli**: `hass-cli state list` (aliased with `--insecure` for self-signed cert)
 - **Env vars in `~/.zshrc`**: `HASS_SERVER`, `HASS_TOKEN`
 - **Claude skill**: `~/.claude/skills/home-assistant-manager/` (HA expertise skill)
-- **`/etc/hosts`**: `192.168.0.186 dashboard.home` — legacy, superseded by Pi-hole (see
-  "Local DNS (Pi-hole)" below), which now resolves `dashboard.home` network-wide. Harmless
+- **`/etc/hosts`**: `192.168.0.186 dashboard.home` — legacy from before Pi-hole DNS
+  records existed; the `.home` scheme itself was later retired for mDNS `.local` names
+  (see "Local names (mDNS/.local)" below), so this entry is now doubly obsolete. Harmless
   to leave in place; safe to remove.
 
 ### On HA SSH Add-on (Alpine, does NOT persist across add-on restarts)
@@ -185,17 +192,21 @@ D-pad, volume, and app launching. Both are needed — not duplicates.
 ## Home Dashboard — "MyDash" command center (rewritten July 2026, rebranded July 2026)
 
 UI branding only — "HOME/OPS" became "MyDash" (title, header wordmark, footer text). The
-container name, directory, DNS name, and everything else below still say `home-dashboard`;
-see `CLAUDE.md`'s "Working with the dashboard" section for the full distinction.
+container name, directory, and `CONTROLLABLE` allowlist entry all still say
+`home-dashboard`; see `CLAUDE.md`'s "Working with the dashboard" section for the full
+distinction. (The mDNS name is `dashboard.local` — see "Local names (mDNS/.local)" below,
+unrelated to the branding/naming distinction above.)
 
-- **URL**: http://dashboard.home or http://192.168.0.186:3000 (direct)
+- **URL**: http://dashboard.local:3000 or http://192.168.0.186:3000 (direct) — port
+  required either way, no NPM proxy (see "Local names (mDNS/.local)" below)
 - **Container**: `home-dashboard` on Ubuntu server
 - **Source**: mirrored in [`../dashboard/`](../dashboard/)
 - **Features**:
   - Live telemetry: host CPU/RAM, ping latency to iMac / HA / this host
   - Services rack (HA, NPM, Portainer, Pi-hole, Homepage, Memos) — each card shows both
-    its `.home` name and raw IP:port, and auto-swaps to the IP if the `.home` name doesn't
-    resolve on your current device (probed client-side on page load)
+    its `.local` name and raw IP:port, and auto-swaps to the IP if the `.local` name
+    doesn't resolve on your current device (probed client-side on page load — matters
+    most for Android, whose mDNS support is patchier than macOS/iOS)
   - Docker container status + restart/stop, scoped to an allowlist (see CLAUDE.md for the
     security tradeoff — this needs `docker.sock` mounted read-write)
   - Pi-hole pause controls (5/10/30 min) right on its card
@@ -205,7 +216,6 @@ see `CLAUDE.md`'s "Working with the dashboard" section for the full distinction.
 - **Docker socket**: mounted **read-write** (was read-only) — needed for the restart/stop
   controls; see the security note in `CLAUDE.md`
 - **Network mode**: host (for LAN ping access and reaching Pi-hole on localhost)
-- **NPM proxy**: `dashboard.home` → `192.168.0.186:3000` (only reachable once a device is using Pi-hole for DNS)
 
 ### Rebuild/restart dashboard
 
@@ -215,40 +225,67 @@ cd ~/apps/home-dashboard
 docker compose up -d --build
 ```
 
-## Local DNS (Pi-hole)
+## Pi-hole (ad blocking)
 
-Added July 2026 so LAN hostnames resolve on every device on the network, not just via a
-manual `/etc/hosts` entry on one Mac. Runs on the Ubuntu server, source in
-[`../pihole/`](../pihole/).
+Runs on the Ubuntu server, source in [`../pihole/`](../pihole/). **As of July 2026, ad
+blocking only** — it used to also serve `.home` local DNS records; that job moved to mDNS
+(next section) after the `.home` scheme turned out to have a router-level IPv6 bug (full
+story in `CLAUDE.md`). Every device on the LAN should still point at it as their DNS
+server for the blocking itself to apply.
 
-- **Admin UI**: https://pihole.home:8080/admin/ or http://192.168.0.186:8080/admin/ (password in `secrets.local.md`)
-- **Router DHCP**: TP-Link Archer BE230, Advanced → Network → DHCP Server — Primary DNS `192.168.0.186`, Secondary DNS `1.1.1.1` (Cloudflare fallback, so the whole LAN keeps internet access even if the Ubuntu server is down; `.home` names and ad-blocking just pause until it's back up)
-- Devices pick up the new DNS server on their next DHCP lease renewal (~2 hr) or immediately after toggling Wi-Fi off/on
-
-| Hostname | Resolves to |
-|---|---|
-| `dashboard.home` | http://192.168.0.186:3000 |
-| `ha.home` | https://192.168.0.121:8123 |
-| `npm.home` | http://192.168.0.186:81 |
-| `portainer.home` | http://192.168.0.186:9000 |
-| `pihole.home` | http://192.168.0.186:8080/admin/ |
-| `homepage.home` | http://192.168.0.186:3001 |
-| `memos.home` | http://192.168.0.186:5230 (no NPM proxy yet — port required) |
+- **Admin UI**: http://pihole.local:8080/admin/ or http://192.168.0.186:8080/admin/ (password in `secrets.local.md`)
+- **Router DHCP**: TP-Link Archer BE230, Advanced → Network → DHCP Server — Primary DNS `192.168.0.186`, Secondary DNS `1.1.1.1` (Cloudflare fallback, so the whole LAN keeps internet access even if the Ubuntu server is down; ad-blocking just pauses until it's back up). **IPv4 only** — the router's IPv6 DNS (Router Advertisement) still points at the ISP's own resolvers, unrelated and unfixed; see next section for why that mattered.
+- Devices pick up the DNS server on their next DHCP lease renewal (~2 hr) or immediately after toggling Wi-Fi off/on
 
 Two Docker gotchas hit while setting this up (see `CLAUDE.md` for the full writeup):
 binding DNS to `0.0.0.0` conflicts with systemd-resolved's loopback stub even though the
 addresses don't overlap, and Pi-hole's default `listeningMode: LOCAL` silently drops real
 LAN client queries under Docker's bridge networking — both required explicit fixes.
 
+## Local names (mDNS/.local)
+
+**Replaced the `.home` (Pi-hole DNS record) scheme entirely, July 2026** — every
+`name.home` became `name.local`, resolved via mDNS (Avahi) instead of a central DNS
+server. Short version of why: the router advertises different DNS servers over IPv4
+(correctly, Pi-hole) and IPv6 (incorrectly, the ISP's own resolvers, which authoritatively
+say "no such domain" for anything `.home` before Pi-hole ever gets asked) — full
+diagnosis and the reasoning for choosing mDNS over a router-level fix are in `CLAUDE.md`'s
+"Local names (mDNS/.local)" section; this is the quick-reference version.
+
+| Name | Port |
+|---|---|
+| `dashboard.local` | 3000 |
+| `homepage.local` | 3001 |
+| `memos.local` | 5230 |
+| `portainer.local` | 9000 |
+| `npm.local` | 81 |
+| `pihole.local` | 8080/admin/ |
+| `homeassistant.local` | 8123 (HA's own built-in mDNS — no setup needed, different host) |
+
+Every name needs its **explicit port** — none of them go through Nginx Proxy Manager
+anymore (its two old proxy hosts for `dashboard.home`/`homepage.home` are now orphaned;
+harmless, worth deleting next time you're in the NPM UI). Set up on the Ubuntu server via
+`avahi-daemon` + `avahi-utils`, with a systemd template unit
+(`avahi-alias@<name>`/`avahi-alias-v6@<name>`) per name publishing both an IPv4 and IPv6
+record — **both address families are required**, publishing only IPv4 caused a ~9 second
+page-load hang in testing while browsers waited out a timeout on the missing IPv6 record.
+See `CLAUDE.md` for the exact commands and config if you need to add another alias.
+
+**Known limitation**: Android's mDNS support is historically inconsistent across
+versions/OEMs — not an issue for any current device on this LAN, but worth knowing.
+
 ## Homepage (start page)
 
 Added July 2026 — a static [Homepage](https://gethomepage.dev) link/status page for the
 whole lab, source in [`../homepage/`](../homepage/).
 
-- **URL**: http://homepage.home or http://192.168.0.186:3001 (direct)
+- **URL**: http://homepage.local:3001 or http://192.168.0.186:3001 (direct) — port
+  required, no NPM proxy (see "Local names (mDNS/.local)" above)
 - **Container**: `homepage` on Ubuntu server, port 3001 (3000 is taken by home-dashboard)
 - **Docker socket**: mounted **read-only** — enables per-service container status without
-  granting start/stop/restart control (unlike the dashboard's read-write mount)
+  granting start/stop/restart control (unlike the dashboard's read-write mount). Socket
+  is `root:docker` GID `983` on this host, so `PGID: 983` in `docker-compose.yml` is
+  required or every status lookup fails silently with `EACCES`.
 - **Config**: `services.yaml`, `settings.yaml`, `widgets.yaml`, `bookmarks.yaml`,
   `docker.yaml` under `homepage/config/`, bind-mounted so most edits hot-reload without a
   rebuild
@@ -257,12 +294,8 @@ whole lab, source in [`../homepage/`](../homepage/).
 - **`HOMEPAGE_ALLOWED_HOSTS` env var required** — without it, every request gets rejected
   with "Host validation failed" (DNS-rebinding protection checking the `Host` header, not
   just IP reachability). Set in `docker-compose.yml`:
-  `HOMEPAGE_ALLOWED_HOSTS: "192.168.0.186:3001,homepage.home,homepage.home:3001"` — add
-  any new host/port you access Homepage from. See `CLAUDE.md` for the full writeup.
-- NPM proxy host + Pi-hole local DNS record for `homepage.home` are both done —
-  `homepage.home` loads on port 80, no `:3001` needed.
-- **TODO**: fill in `container:` names for the NPM and Portainer cards in `services.yaml`
-  once confirmed on the server
+  `HOMEPAGE_ALLOWED_HOSTS: "homepage.local:3001,192.168.0.186:3001"` — add any new
+  host/port you access Homepage from. See `CLAUDE.md` for the full writeup.
 
 ### Deploy
 
@@ -276,8 +309,8 @@ ssh joecastagna@192.168.0.186 "cd ~/apps/homepage && docker compose up -d"
 Added July 2026 — a self-hosted micro-notes app ([usememos.com](https://usememos.com)),
 source in [`../memos/`](../memos/).
 
-- **URL**: http://memos.home:5230 or http://192.168.0.186:5230 (explicit port required —
-  no NPM proxy host set up yet, unlike Homepage/dashboard)
+- **URL**: http://memos.local:5230 or http://192.168.0.186:5230 (explicit port required —
+  no NPM proxy, same as every other `.local` name now)
 - **Container**: `memos` on Ubuntu server, port 5230 (Memos' own default; free on this
   host)
 - **Image**: `ghcr.io/usememos/memos:stable` — the GitHub Container Registry path; Memos'
@@ -285,8 +318,6 @@ source in [`../memos/`](../memos/).
   actively-maintained one
 - **Data**: `./data:/var/opt/memos`, bind-mounted
 - **Docker socket**: not mounted — Memos doesn't need Docker awareness
-- **TODO**: NPM proxy host (`memos.home` → `192.168.0.186:5230`) for a clean URL without
-  the port — needs NPM admin UI access (`http://192.168.0.186:81`), not done yet
 
 ### Deploy
 
@@ -307,6 +338,14 @@ ssh joecastagna@192.168.0.186 "cd ~/apps/memos && docker compose up -d"
 - **Idea, not yet built**: Cast a live Mets/FIFA scoreboard Lovelace view to a TV on game
   start (sensors and Gemini text already exist; just needs a dashboard view + one more
   cast action wired into the existing automations).
+- **NPM has two orphaned proxy hosts** (`dashboard.home`, `homepage.home`) left over from
+  the July 2026 `.home` → `.local` migration — harmless dead config, worth deleting next
+  time you're in the NPM admin UI.
+- **Router's IPv6 DNS still isn't fixed**: it advertises the ISP's own DNS resolvers over
+  IPv6 (Router Advertisement), independent of the IPv4 DHCP setting that correctly points
+  at Pi-hole — this is what broke the old `.home` scheme. mDNS sidesteps it for the
+  services documented here, but it would still affect anything else built to rely on
+  Pi-hole's DNS overrides specifically over IPv6 in the future. See `CLAUDE.md`.
 
 ## Useful Commands
 

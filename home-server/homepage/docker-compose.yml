@@ -11,7 +11,7 @@ services:
       # The socket below is root:docker 660, so the container user must
       # carry that group or every Docker status lookup fails with EACCES.
       PGID: 983
-      HOMEPAGE_ALLOWED_HOSTS: 'homepage.home,homepage.home:3001,192.168.0.186:3001'
+      HOMEPAGE_ALLOWED_HOSTS: 'homepage.local:3001,homepage.home,homepage.home:3001,192.168.0.186:3001'
       # Both sourced from ~/apps/homepage/.env on the server (never committed):
       # PIHOLE_PASSWORD=... and HA_TOKEN=...
       HOMEPAGE_VAR_PIHOLE_PASSWORD: '${PIHOLE_PASSWORD}'
