@@ -1,36 +1,82 @@
 ---
-- Home Lab:
-    - Home Dashboard:
-        href: http://dashboard.home
-        description: HOME/OPS command center
-        icon: homeassistant.png
-        server: my-docker
-        container: home-dashboard
-
+# Widget URLs use raw IPs on purpose — they're fetched server-side by the
+# Homepage container, whose DNS may not go through Pi-hole. The href links
+# use .home names since those open in the *browser*, which does.
+- Home Network:
     - Home Assistant:
         href: https://ha.home:8123
-        description: Home Assistant OS VM
-        icon: home-assistant.png
-
-    - Nginx Proxy Manager:
-        href: http://npm.home
-        description: Reverse proxy for *.home hosts
-        icon: nginx-proxy-manager.png
-        # add `server: my-docker` / `container: <name>` once the NPM container name is confirmed
-
-    - Portainer:
-        href: http://portainer.home
-        description: Docker management UI
-        icon: portainer.png
-        # add `server: my-docker` / `container: <name>` once the Portainer container name is confirmed
+        description: Home automation
+        icon: home-assistant
+        widget:
+          type: homeassistant
+          url: https://192.168.0.121:8123
+          key: '{{HOMEPAGE_VAR_HA_TOKEN}}'
 
     - Pi-hole:
         href: http://pihole.home:8080/admin/
         description: LAN DNS + ad blocking
-        icon: pi-hole.png
-        server: my-docker
+        icon: pi-hole
+        server: local
         container: pihole
         widget:
           type: pihole
+          version: 6
           url: http://192.168.0.186:8080
           key: '{{HOMEPAGE_VAR_PIHOLE_PASSWORD}}'
+
+    - Nginx Proxy Manager:
+        href: http://npm.home
+        description: Reverse proxy & SSL
+        icon: nginx-proxy-manager
+        server: local
+        container: nginx-proxy-manager
+
+    - Portainer:
+        href: http://portainer.home
+        description: Container management
+        icon: portainer
+        server: local
+        container: portainer
+        # Status widget disabled until an API access token exists — an empty
+        # `key:` just spams 401s in the logs. To enable: Portainer UI → user
+        # menu → "My account" → Access tokens → add token, put it in
+        # ~/apps/homepage/.env as PORTAINER_KEY=..., add
+        # HOMEPAGE_VAR_PORTAINER_KEY to docker-compose.yml, then restore:
+        # widget:
+        #   type: portainer
+        #   url: http://192.168.0.186:9000
+        #   env: 2
+        #   key: '{{HOMEPAGE_VAR_PORTAINER_KEY}}'
+
+    - Memos:
+        href: http://memos.home:5230
+        description: Micro-notes
+        icon: memos
+        server: local
+        container: memos
+
+    - Homepage:
+        href: http://homepage.home
+        description: This start page
+        icon: homepage
+        server: local
+        container: homepage
+
+- Dashboards:
+    - MyDash:
+        href: http://dashboard.home
+        description: Custom command center (container name home-dashboard)
+        icon: mdi-monitor-dashboard
+        server: local
+        container: home-dashboard
+
+    - Joe's Dashboard:
+        href: https://joecastagna.me/dashb/
+        description: Personal dashboard
+        icon: mdi-view-dashboard
+
+- Remote Access:
+    - Home Assistant (DuckDNS):
+        href: https://joecastagna-ha.duckdns.org:8123
+        description: HA external access
+        icon: duckdns

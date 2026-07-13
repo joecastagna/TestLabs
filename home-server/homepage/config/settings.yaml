@@ -1,8 +1,15 @@
-title: Home Lab
+title: Home Server
+favicon: https://joecastagna.me/favicon.ico
 theme: dark
 color: slate
-target: _self
+headerStyle: clean
 layout:
-  Home Lab:
+  Home Network:
     style: row
     columns: 3
+  Dashboards:
+    style: row
+    columns: 2
+  Remote Access:
+    style: row
+    columns: 1
