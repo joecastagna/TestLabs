@@ -11,6 +11,7 @@
 | **Nginx Proxy Manager** | http://npm.home | http://192.168.0.186:81 |
 | **Pi-hole Admin** | http://pihole.home:8080/admin/ | http://192.168.0.186:8080/admin/ |
 | **Homepage** | http://homepage.home | http://192.168.0.186:3001 |
+| **Memos** | http://memos.home:5230 | http://192.168.0.186:5230 |
 
 | SSH | Command |
 |---|---|
@@ -31,7 +32,8 @@ MacBook (you) ── LAN ── iMac (192.168.0.89, UTM host)
                            │     ├── nginx-proxy-manager (ports 80/81/443)
                            │     ├── portainer (port 9000)
                            │     ├── pihole (DNS :53, admin UI :8080)
-                           │     └── homepage (port 3001)
+                           │     ├── homepage (port 3001, proxied via NPM on :80)
+                           │     └── memos (port 5230, no NPM proxy yet)
                            └── HA OS VM (192.168.0.121:8123) ── Home Assistant
 
 Router DHCP → Pi-hole (192.168.0.186) as primary DNS, 1.1.1.1 as fallback
@@ -44,6 +46,18 @@ Router DHCP → Pi-hole (192.168.0.186) as primary DNS, 1.1.1.1 as fallback
 - **Ubuntu password**: see `secrets.local.md` (not in this repo)
 - **HA API Token (JWT)**: stored in `.zshrc` as `HASS_TOKEN`, also in `/config/.storage/auth` on the HA server. Value kept out of this public repo — see `secrets.local.md`.
 - **NPM login**: `joecastagna@gmail.com` (password changed from default during initial setup; already logged in via browser session)
+- **iMac → Ubuntu Server**: separate from the MacBook's SSH setup above. The iMac has its
+  own key (`~/.ssh/id_ed25519_homeserver`) and a `Host homeserver` alias in `~/.ssh/config`,
+  but that alias didn't originally cover the bare IP — `ssh joecastagna@192.168.0.186` (as
+  opposed to `ssh homeserver`) failed until a second `Host 192.168.0.186` stanza was added
+  pointing at the same `IdentityFile`. Fixed as of July 2026; both `ssh homeserver` and
+  `ssh joecastagna@192.168.0.186` now work from the iMac.
+- **iMac → HA Server**: no working key yet as of July 2026 — `ssh root@192.168.0.121` from
+  the iMac fails with `Permission denied (publickey)` (no matching identity file, no
+  `~/.ssh/config` entry for that host). The HA long-lived token (`HASS_TOKEN`) works fine
+  as a substitute for read/investigate work via the REST/WebSocket API; only actual file-
+  level or shell access would need SSH fixed. The Terminal & SSH add-on is running on HA if
+  this gets addressed.
 
 ### Quick API test from MacBook
 
@@ -168,16 +182,20 @@ Cast entities (Google Cast) can receive `play_media`, TTS, camera streams, and L
 dashboard casts. Remote entities (Android TV Remote / Vizio SmartCast) handle power,
 D-pad, volume, and app launching. Both are needed — not duplicates.
 
-## Home Dashboard — "HOME/OPS" command center (rewritten July 2026)
+## Home Dashboard — "MyDash" command center (rewritten July 2026, rebranded July 2026)
+
+UI branding only — "HOME/OPS" became "MyDash" (title, header wordmark, footer text). The
+container name, directory, DNS name, and everything else below still say `home-dashboard`;
+see `CLAUDE.md`'s "Working with the dashboard" section for the full distinction.
 
 - **URL**: http://dashboard.home or http://192.168.0.186:3000 (direct)
 - **Container**: `home-dashboard` on Ubuntu server
 - **Source**: mirrored in [`../dashboard/`](../dashboard/)
 - **Features**:
   - Live telemetry: host CPU/RAM, ping latency to iMac / HA / this host
-  - Services rack (HA, NPM, Portainer, Pi-hole) — each card shows both its `.home` name
-    and raw IP:port, and auto-swaps to the IP if the `.home` name doesn't resolve on your
-    current device (probed client-side on page load)
+  - Services rack (HA, NPM, Portainer, Pi-hole, Homepage, Memos) — each card shows both
+    its `.home` name and raw IP:port, and auto-swaps to the IP if the `.home` name doesn't
+    resolve on your current device (probed client-side on page load)
   - Docker container status + restart/stop, scoped to an allowlist (see CLAUDE.md for the
     security tradeoff — this needs `docker.sock` mounted read-write)
   - Pi-hole pause controls (5/10/30 min) right on its card
@@ -214,6 +232,8 @@ manual `/etc/hosts` entry on one Mac. Runs on the Ubuntu server, source in
 | `npm.home` | http://192.168.0.186:81 |
 | `portainer.home` | http://192.168.0.186:9000 |
 | `pihole.home` | http://192.168.0.186:8080/admin/ |
+| `homepage.home` | http://192.168.0.186:3001 |
+| `memos.home` | http://192.168.0.186:5230 (no NPM proxy yet — port required) |
 
 Two Docker gotchas hit while setting this up (see `CLAUDE.md` for the full writeup):
 binding DNS to `0.0.0.0` conflicts with systemd-resolved's loopback stub even though the
@@ -234,15 +254,45 @@ whole lab, source in [`../homepage/`](../homepage/).
   rebuild
 - **Pi-hole widget** password comes from `HOMEPAGE_VAR_PIHOLE_PASSWORD`, sourced from the
   same `.env` `PIHOLE_PASSWORD` value already used by `pihole/` and `dashboard/`
-- **TODO**: NPM proxy host + Pi-hole local DNS record for `homepage.home` (both live
-  server-side, not done yet); fill in `container:` names for the NPM and Portainer cards
-  in `services.yaml` once confirmed on the server
+- **`HOMEPAGE_ALLOWED_HOSTS` env var required** — without it, every request gets rejected
+  with "Host validation failed" (DNS-rebinding protection checking the `Host` header, not
+  just IP reachability). Set in `docker-compose.yml`:
+  `HOMEPAGE_ALLOWED_HOSTS: "192.168.0.186:3001,homepage.home,homepage.home:3001"` — add
+  any new host/port you access Homepage from. See `CLAUDE.md` for the full writeup.
+- NPM proxy host + Pi-hole local DNS record for `homepage.home` are both done —
+  `homepage.home` loads on port 80, no `:3001` needed.
+- **TODO**: fill in `container:` names for the NPM and Portainer cards in `services.yaml`
+  once confirmed on the server
 
 ### Deploy
 
 ```bash
 scp -r homepage/docker-compose.yml homepage/config joecastagna@192.168.0.186:~/apps/homepage/
 ssh joecastagna@192.168.0.186 "cd ~/apps/homepage && docker compose up -d"
+```
+
+## Memos
+
+Added July 2026 — a self-hosted micro-notes app ([usememos.com](https://usememos.com)),
+source in [`../memos/`](../memos/).
+
+- **URL**: http://memos.home:5230 or http://192.168.0.186:5230 (explicit port required —
+  no NPM proxy host set up yet, unlike Homepage/dashboard)
+- **Container**: `memos` on Ubuntu server, port 5230 (Memos' own default; free on this
+  host)
+- **Image**: `ghcr.io/usememos/memos:stable` — the GitHub Container Registry path; Memos'
+  own docs still show the older `neosmemo/memos` name in places, but GHCR is the
+  actively-maintained one
+- **Data**: `./data:/var/opt/memos`, bind-mounted
+- **Docker socket**: not mounted — Memos doesn't need Docker awareness
+- **TODO**: NPM proxy host (`memos.home` → `192.168.0.186:5230`) for a clean URL without
+  the port — needs NPM admin UI access (`http://192.168.0.186:81`), not done yet
+
+### Deploy
+
+```bash
+scp memos/docker-compose.yml joecastagna@192.168.0.186:~/apps/memos/
+ssh joecastagna@192.168.0.186 "cd ~/apps/memos && docker compose up -d"
 ```
 
 ## Known Issues / TODO
