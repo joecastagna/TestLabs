@@ -1,0 +1,11 @@
+{
+  "name": "catsnap",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "podman-compose -f ci/dev/docker-compose.yml build && podman-compose -f ci/dev/docker-compose.yml up",
+    "dev:down": "podman-compose -f ci/dev/docker-compose.yml down",
+    "dev:logs": "podman-compose -f ci/dev/docker-compose.yml logs -f"
+  }
+}
