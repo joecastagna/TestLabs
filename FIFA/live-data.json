@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T18:23:55.086Z",
+  "generatedAt": "2026-09-03T21:14:06.994Z",
   "source": "TheSportsDB",
   "season": "2026",
   "usaRating": 1659,
@@ -21,25 +21,25 @@
       {
         "team": "Australia",
         "code": "AUS",
-        "played": 1,
-        "win": 1,
+        "played": 0,
+        "win": 0,
         "draw": 0,
         "loss": 0,
-        "gf": 2,
+        "gf": 0,
         "ga": 0,
-        "gd": 2,
-        "points": 3
+        "gd": 0,
+        "points": 0
       },
       {
         "team": "Türkiye",
         "code": "TUR",
-        "played": 1,
+        "played": 0,
         "win": 0,
         "draw": 0,
-        "loss": 1,
+        "loss": 0,
         "gf": 0,
-        "ga": 2,
-        "gd": -2,
+        "ga": 0,
+        "gd": 0,
         "points": 0
       },
       {
